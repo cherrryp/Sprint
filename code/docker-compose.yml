@@ -4,15 +4,15 @@ services:
     container_name: pnn-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-pnn_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pnn_secret}
-      POSTGRES_DB: ${POSTGRES_DB:-pnn_db}
+      POSTGRES_USER: ${POSTGRES_USER:-pnnapp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-pnnapp_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pnn_user} -d ${POSTGRES_DB:-pnn_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pnnapp_user}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,64 +26,40 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-3002}:3000"
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pnn_user}:${POSTGRES_PASSWORD:-pnn_secret}@postgres:5432/${POSTGRES_DB:-pnn_db}?schema=public
-      JWT_SECRET: ${JWT_SECRET}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@painamnae.com}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme123}
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pnnapp_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pnnapp_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin123}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-123456789}
       ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-System}
       ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-Administrator}
-    ports:
-      - "3000:3000"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://backend:3000/api/}
-        NUXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NUXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+        NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://localhost:3002/api/}
+        NUXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NUXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     container_name: pnn-frontend
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://localhost:3000/api/}
-      NUXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NUXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+      - backend
     ports:
-      - "3001:3000"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  migrate:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: deps
-    container_name: pnn-migrate
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "${FRONTEND_PORT:-3003}:3001"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pnn_user}:${POSTGRES_PASSWORD:-pnn_secret}@postgres:5432/${POSTGRES_DB:-pnn_db}?schema=public
-    command: npx prisma migrate deploy
-    restart: "no"
+      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://localhost:3002/api/}
+      NUXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NUXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
 
 volumes:
   postgres_data:

@@ -9,20 +9,13 @@ Quick start guide for running Pai Nam Nae with Docker naja.
 
 ## Quick Start
 
+### Getting Started
+
+1. Create `.env` file in the same directory as `docker-compose.yml`
+2. Copy values from `.env.example` and fill in required variables
+3. Run with Docker Compose:
 ```bash
-# 1. Copy environment file
-cp .env.example .env
-
-# 2. Edit .env with actual values (required: JWT_SECRET, GOOGLE_MAPS keys, Cloudinary)
-
-# 3. Start all services
-docker compose up -d
-
-# 4. Run database migrations (first time only)
-docker compose run --rm migrate
-
-# 5. View logs
-docker compose logs -f
+   docker compose up -d --build
 ```
 
 ## Services

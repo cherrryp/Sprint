@@ -1,36 +1,44 @@
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat
+# =============================================================================
+# Stage 1: Build
+# =============================================================================
+FROM node:20-alpine AS build
+
 WORKDIR /app
 
-FROM base AS deps
+# Install dependencies
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source code
 COPY . .
+
+# Build-time public config (embedded into client bundle)
+ARG NUXT_PUBLIC_API_BASE=http://localhost:3000/api/
+ARG NUXT_PUBLIC_GOOGLE_MAPS_API_KEY=
+
+ENV NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE
+ENV NUXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NUXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+# Build Nuxt app
 RUN npm run build
 
-FROM base AS runner
-LABEL maintainer="Pai Nam Nae Team"
-LABEL description="Frontend for Pai Nam Nae ride-sharing application"
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nuxtjs
+# =============================================================================
+# Stage 2: Production
+# =============================================================================
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-COPY --from=builder --chown=nuxtjs:nodejs /app/.output ./.output
+# Copy built output only
+COPY --from=build /app/.output ./.output
 
-USER nuxtjs
+# Expose Nuxt server port
+EXPOSE 3001
 
-EXPOSE 3000
-
-ENV NODE_ENV=production
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=3001
+ENV NITRO_PORT=3001
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
-
+# Start Nuxt (Nitro) server
 CMD ["node", ".output/server/index.mjs"]
