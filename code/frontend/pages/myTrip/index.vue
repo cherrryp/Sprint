@@ -338,78 +338,78 @@
           </button>
         </div>
       </div>
+    </div>
 
-      <!-- REPORT MODAL -->
-      <div
-        v-if="isReportModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-      >
-        <div class="w-full max-w-lg p-6 bg-white rounded-lg shadow-lg">
-          <h3 class="mb-4 text-lg font-semibold text-gray-900">
-            รายงานปัญหาการเดินทาง
-          </h3>
+    <!-- REPORT MODAL -->
+    <div
+      v-if="isReportModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      @click.self="closeReportModal"
+    >
+      <div class="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
+        <h3 class="text-lg font-semibold text-gray-900">
+          รายงานปัญหาการเดินทาง
+        </h3>
+        <p class="mt-1 text-sm text-gray-600">โปรดกรอกข้อมูลให้ครบถ้วน</p>
 
-          <div class="space-y-4">
-            <!-- Category -->
-            <div>
-              <label class="block mb-1 text-sm font-medium text-gray-700">
-                ประเภทปัญหา
-              </label>
-              <select
-                v-model="reportForm.category"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option disabled value="">-- เลือกประเภท --</option>
-                <option value="DRIVER_BEHAVIOR">พฤติกรรมผู้ขับ</option>
-                <option value="LATE_ARRIVAL">มาสาย</option>
-                <option value="DANGEROUS_DRIVING">ขับรถอันตราย</option>
-                <option value="PAYMENT_ISSUE">ปัญหาการชำระเงิน</option>
-                <option value="OTHER">อื่น ๆ</option>
-              </select>
-            </div>
-
-            <!-- Description -->
-            <div>
-              <label class="block mb-1 text-sm font-medium text-gray-700">
-                รายละเอียด
-              </label>
-              <textarea
-                v-model="reportForm.description"
-                rows="4"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="กรอกรายละเอียดปัญหา..."
-              ></textarea>
-            </div>
-
-            <!-- Evidence -->
-            <div>
-              <label class="block mb-1 text-sm font-medium text-gray-700">
-                แนบหลักฐาน (ถ้ามี)
-              </label>
-              <input
-                type="file"
-                multiple
-                @change="handleEvidenceUpload"
-                class="w-full text-sm"
-              />
-            </div>
+        <div class="mt-4 space-y-4">
+          <!-- Category -->
+          <div>
+            <label class="block mb-1 text-sm text-gray-700">
+              ประเภทปัญหา
+            </label>
+            <select
+              v-model="reportForm.category"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option disabled value="">-- เลือกประเภท --</option>
+              <option value="DRIVER_BEHAVIOR">พฤติกรรมผู้ขับ</option>
+              <option value="LATE_ARRIVAL">มาสาย</option>
+              <option value="DANGEROUS_DRIVING">ขับรถอันตราย</option>
+              <option value="PAYMENT_ISSUE">ปัญหาการชำระเงิน</option>
+              <option value="OTHER">อื่น ๆ</option>
+            </select>
           </div>
 
-          <div class="flex justify-end mt-6 space-x-3">
-            <button
-              @click="closeReportModal"
-              class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              ยกเลิก
-            </button>
-
-            <button
-              @click="submitReport"
-              class="px-4 py-2 text-sm text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
-            >
-              ส่งรายงาน
-            </button>
+          <!-- Description -->
+          <div>
+            <label class="block mb-1 text-sm text-gray-700"> รายละเอียด </label>
+            <textarea
+              v-model="reportForm.description"
+              rows="4"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="กรอกรายละเอียดปัญหา..."
+            ></textarea>
           </div>
+
+          <!-- Evidence -->
+          <div>
+            <label class="block mb-1 text-sm text-gray-700">
+              แนบหลักฐาน (ถ้ามี)
+            </label>
+            <input
+              type="file"
+              multiple
+              @change="handleEvidenceUpload"
+              class="w-full text-sm"
+            />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-6">
+          <button
+            @click="closeReportModal"
+            class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+          >
+            ปิด
+          </button>
+
+          <button
+            @click="submitReport"
+            class="px-4 py-2 text-sm text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
+          >
+            ส่งรายงาน
+          </button>
         </div>
       </div>
     </div>
@@ -434,69 +434,90 @@ import buddhistEra from "dayjs/plugin/buddhistEra";
 import ConfirmModal from "~/components/ConfirmModal.vue";
 import { useToast } from "~/composables/useToast";
 
-const isReportModalOpen = ref(false)
-const selectedReportTrip = ref(null)
+const isReportModalOpen = ref(false);
+const selectedReportTrip = ref(null);
 
 const reportForm = ref({
-    bookingId: null,
-    category: '',
-    description: '',
-    evidences: [] 
-})
+  bookingId: null,
+  driverId: null,
+  routeId: null,
+  category: "",
+  description: "",
+  evidences: [],
+});
 
 function openReportModal(trip) {
-    selectedReportTrip.value = trip
-    reportForm.value.bookingId = trip.id
-    isReportModalOpen.value = true
+  selectedReportTrip.value = trip;
+
+  reportForm.value = {
+    bookingId: trip.id,
+    driverId: trip.driverId,
+    routeId: trip.routeId,
+    category: "",
+    description: "",
+  };
+
+  isReportModalOpen.value = true;
 }
 
+// ปิด Modal และ reset ค่า
 function closeReportModal() {
-    isReportModalOpen.value = false
-    reportForm.value = {
-        bookingId: null,
-        category: '',
-        description: '',
-        evidences: []
+  isReportModalOpen.value = false;
+
+  reportForm.value = {
+    bookingId: null,
+    driverId: null,
+    routeId: null,
+    category: "",
+    description: "",
+  };
+}
+
+//ส่งรายงาน
+async function submitReport() {
+  try {
+    const response = await fetch("/api/reports", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        driverId: reportForm.value.driverId,
+        bookingId: reportForm.value.bookingId,
+        routeId: reportForm.value.routeId,
+        category: reportForm.value.category,
+        description: reportForm.value.description,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "เกิดข้อผิดพลาด");
     }
+
+    alert("ส่งรายงานเรียบร้อยแล้ว");
+    closeReportModal();
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
 }
 
 function handleEvidenceUpload(event) {
-    const files = Array.from(event.target.files)
+  const files = Array.from(event.target.files);
 
-    reportForm.value.evidences = files.map(file => ({
-        type: file.type.startsWith('image')
-            ? 'IMAGE'
-            : file.type.startsWith('video')
-                ? 'VIDEO'
-                : 'FILE',
-        file
-    }))
+  reportForm.value.evidences = files.map((file) => ({
+    type: file.type.startsWith("image")
+      ? "IMAGE"
+      : file.type.startsWith("video")
+        ? "VIDEO"
+        : "FILE",
+    file,
+  }));
 }
 
-async function submitReport() {
-    try {
-        const formData = new FormData()
-        formData.append('bookingId', reportForm.value.bookingId)
-        formData.append('category', reportForm.value.category)
-        formData.append('description', reportForm.value.description)
-
-        reportForm.value.evidences.forEach((evidence, index) => {
-            formData.append(`evidences[${index}].type`, evidence.type)
-            formData.append(`evidences[${index}].file`, evidence.file)
-        })
-
-        await fetch('/api/report-case', {
-            method: 'POST',
-            body: formData
-        })
-
-        alert('ส่งรายงานเรียบร้อยแล้ว')
-        closeReportModal()
-    } catch (error) {
-        console.error(error)
-        alert('เกิดข้อผิดพลาด')
-    }
-}
 
 // Setup dayjs for Thai locale
 dayjs.locale("th");

@@ -1,6 +1,5 @@
 const reportService = require('../services/report.service');
 const { auditLog, getUserFromRequest } = require('../utils/auditLog');
-const multer = require('multer');
 
 exports.createReport = async (req, res) => {
   try {
