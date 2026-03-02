@@ -372,6 +372,20 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Added Report Management page for report handling and monitoring.
 - Added a sidebar navigation link to the Report Management page.
+- Added 4LsRetroSpective File
+
+---
+
+## [2.0.0] - 2026-03-03 - Yodsanon_0215
+### Added
+- Added groupId field to the ReportCase model in schema.prisma for multi-user reporting.
+- Implemented addEvidencesToReportGroup in report.service.js to support bulk evidence uploads for grouped reports.
+- Added logic to automatically generate and assign groupId (e.g., REP-xxxx) when reporting multiple users.
+
+### Changed
+- src/controllers/report.controller.js - Updated createReport and addEvidence to support group-based reporting and evidence distribution.
+
+- src/validations/report.validation.js - Updated createReportSchema to accept an array of reportedUserIds.
 
 ---
 
