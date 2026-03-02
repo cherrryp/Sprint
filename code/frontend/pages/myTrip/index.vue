@@ -262,13 +262,21 @@
                   </template>
 
                   <!-- REJECTED / CANCELLED: ลบได้ -->
-                  <button
-                    v-else-if="['rejected', 'cancelled'].includes(trip.status)"
-                    @click.stop="openConfirmModal(trip, 'delete')"
-                    class="px-4 py-2 text-sm text-gray-600 transition duration-200 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    ลบรายการ
-                  </button>
+                  <template v-else-if="trip.status === 'rejected'">
+                    <button
+                      @click.stop="openReportModal(trip)"
+                      class="px-3 py-1.5 text-xs text-yellow-700 border border-yellow-300 rounded-md hover:bg-yellow-50"
+                    >
+                      รายงานปัญหา
+                    </button>
+
+                    <button
+                      @click.stop="openConfirmModal(trip, 'delete')"
+                      class="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      ลบรายการ
+                    </button>
+                  </template>
                 </div>
               </div>
             </div>
@@ -380,11 +388,19 @@
                         type="checkbox"
                         :value="user.id"
                         v-model="reportForm.reportedUserIds"
+                        :disabled="blockedReportedUserIds.includes(user.id)"
                       />
                     </td>
 
                     <td class="px-3 py-2">
                       {{ user.firstName }} {{ user.lastName }}
+
+                      <span
+                        v-if="blockedReportedUserIds.includes(user.id)"
+                        class="block mt-1 text-xs text-red-500"
+                      >
+                        มีเคสที่กำลังตรวจสอบอยู่
+                      </span>
                     </td>
 
                     <td class="px-3 py-2">
@@ -505,9 +521,10 @@ const reportableUsers = computed(() => {
 
   const trip = selectedReportTrip.value;
   const users = [];
+  const currentUserId = getCurrentUserId();
 
-  //เพิ่ม driver
-  if (trip.driverId) {
+  // เพิ่มคนขับ
+  if (trip.driverId && trip.driverId !== currentUserId) {
     users.push({
       id: trip.driverId,
       firstName:
@@ -522,22 +539,37 @@ const reportableUsers = computed(() => {
     });
   }
 
-  //เพิ่มผู้โดยสารคนอื่น
+  // เพิ่มผู้โดยสาร
   if (Array.isArray(trip.passengers)) {
     trip.passengers.forEach((p) => {
-      // ไม่เอาตัวเอง
-      if (p.id !== getCurrentUserId()) {
-        users.push({
-          id: p.id,
-          firstName: p.firstName || "ไม่ทราบชื่อ",
-          lastName: p.lastName || "",
-          role: "PASSENGER",
-        });
-      }
+      if (!p?.id || p.id === currentUserId) return;
+
+      users.push({
+        id: p.id,
+        firstName: p.firstName || "ไม่ทราบชื่อ",
+        lastName: p.lastName || "",
+        role: "PASSENGER",
+      });
     });
   }
 
-  return users;
+  // ป้องกันซ้ำ
+  const seen = new Set();
+  return users.filter((u) => {
+    if (seen.has(u.id)) return false;
+    seen.add(u.id);
+    return true;
+  });
+});
+
+const blockedReportedUserIds = computed(() => {
+  if (!selectedReportTrip.value?.reports) return [];
+
+  return selectedReportTrip.value.reports
+    .filter((r) =>
+      ["FILED", "UNDER_REVIEW", "INVESTIGATING"].includes(r.status),
+    )
+    .map((r) => r.reportedUserId);
 });
 
 const reportForm = ref({
@@ -607,6 +639,14 @@ async function submitReport() {
       toast.error("รายละเอียดต้องมีอย่างน้อย 5 ตัวอักษร");
       return;
     }
+    const hasBlockedUser = reportForm.value.reportedUserIds.some((id) =>
+      blockedReportedUserIds.value.includes(id),
+    );
+
+    if (hasBlockedUser) {
+      toast.error("ไม่สามารถรายงานซ้ำได้ กรุณารอให้การตรวจสอบเสร็จสิ้น");
+      return;
+    }
 
     isSubmittingReport.value = true;
 
@@ -624,7 +664,8 @@ async function submitReport() {
 
     toast.success("ส่งรายงานสำเร็จ");
     closeReportModal();
-    
+
+    router.push("/myHistory");
   } catch (error) {
     console.error(error);
     toast.error(error?.data?.message || "ไม่สามารถส่งรายงานได้");
@@ -798,8 +839,9 @@ async function fetchMyTrips() {
 
       return {
         id: b.id,
-
+        routeId: b.route.id,
         driverId: driverData.id,
+        reports: b.reports || [],
 
         status: String(b.status || "").toLowerCase(),
         origin:
@@ -819,13 +861,19 @@ async function fetchMyTrips() {
         seats: b.numberOfSeats || 1,
         driver: driverData,
 
-        passengers:
-          b.route.bookings?.map((bk) => ({
-            id: bk.user?.id,
-            firstName: bk.user?.firstName || "",
-            lastName: bk.user?.lastName || "",
-            name: `${bk.user?.firstName || ""} ${bk.user?.lastName || ""}`.trim(),
-          })) || [],
+        passengers: Array.isArray(b.route.bookings)
+          ? b.route.bookings
+              .map((bk) => {
+                if (!bk.user) return null; // กันกรณีไม่มี include user
+                return {
+                  id: bk.user.id,
+                  firstName: bk.user.firstName || "",
+                  lastName: bk.user.lastName || "",
+                  name: `${bk.user.firstName || ""} ${bk.user.lastName || ""}`.trim(),
+                };
+              })
+              .filter(Boolean)
+          : [],
 
         coords: [
           [start.lat, start.lng],

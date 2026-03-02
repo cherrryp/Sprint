@@ -164,7 +164,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated } from "vue";
+import { ref, onMounted } from "vue";
+
+
+const router = useRouter();
 
 const reportCases = ref([]);
 const selectedReport = ref(null);
@@ -179,31 +182,57 @@ const searchForm = ref({
 
 const fetchReports = async () => {
   try {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      console.warn("ไม่พบ token");
+      reportCases.value = [];
+      return;
+    }
+
     isLoading.value = true;
     errorMessage.value = "";
     selectedReport.value = null;
 
-    const query = {};
-    if (searchForm.value.keyword?.trim())
-      query.keyword = searchForm.value.keyword.trim();
-    if (searchForm.value.category) query.category = searchForm.value.category;
-    if (searchForm.value.status) query.status = searchForm.value.status;
+    const query = new URLSearchParams();
 
-    const res = await $api("/reports/my", {
-      method: "GET",
-      params: query,
-    });
-
-    if (Array.isArray(res)) {
-      reportCases.value = res;
-    } else if (res?.data) {
-      reportCases.value = res.data;
-    } else {
-      reportCases.value = [];
+    if (searchForm.value.keyword?.trim()) {
+      query.append("keyword", searchForm.value.keyword.trim());
     }
+
+    if (searchForm.value.category) {
+      query.append("category", searchForm.value.category);
+    }
+
+    if (searchForm.value.status) {
+      query.append("status", searchForm.value.status);
+    }
+
+    const response = await fetch(
+      `http://localhost:3000/api/reports/my?${query.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+  
+    if (response.status === 401) {
+      console.warn("Token หมดอายุหรือไม่ถูกต้อง");
+      reportCases.value = [];
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error("โหลดข้อมูลไม่สำเร็จ");
+    }
+
+    const data = await response.json();
+    reportCases.value = data.data || data;
   } catch (err) {
     console.error(err);
-    errorMessage.value = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+    errorMessage.value = err.message;
     reportCases.value = [];
   } finally {
     isLoading.value = false;
@@ -215,48 +244,10 @@ const handleSearch = () => {
 };
 
 const toggleDetails = (report) => {
-  if (!report?.id) return;
   selectedReport.value = selectedReport.value?.id === report.id ? null : report;
 };
 
-const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleString("th-TH");
-};
-
-const formatCategory = (cat) => {
-  const map = {
-    DANGEROUS_DRIVING: "ขับรถอันตราย",
-    AGGRESSIVE_BEHAVIOR: "พฤติกรรมก้าวร้าว",
-    HARASSMENT: "คุกคาม",
-    NO_SHOW: "ไม่มาตามนัด",
-    FRAUD_OR_SCAM: "ฉ้อโกง",
-    OTHER: "อื่น ๆ",
-  };
-  return map[cat] || cat || "-";
-};
-
-const statusClass = (status) => {
-  const base = "px-3 py-1 rounded-full text-xs font-medium";
-
-  switch (status) {
-    case "FILED":
-      return `${base} bg-gray-100 text-gray-800`;
-    case "UNDER_REVIEW":
-      return `${base} bg-yellow-100 text-yellow-800`;
-    case "INVESTIGATING":
-      return `${base} bg-blue-100 text-blue-800`;
-    case "RESOLVED":
-      return `${base} bg-green-100 text-green-800`;
-    case "REJECTED":
-      return `${base} bg-red-100 text-red-800`;
-    case "CLOSED":
-      return `${base} bg-gray-200 text-gray-700`;
-    default:
-      return `${base} bg-gray-100 text-gray-600`;
-  }
-};
-
-onMounted(fetchReports);
-onActivated(fetchReports);
+onMounted(() => {
+  fetchReports();
+});
 </script>
