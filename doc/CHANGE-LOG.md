@@ -418,6 +418,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.0.0] - 2026-03-03 - Wisit_2348
+
+### Added
+- Added automated API tests for the report module.
+- Added A-DAPT Blueprint FOR SPRINT 2
+
+### Changed
+- Reorganized project documentation files for better structure and maintainability.
+
+### Fixed
+- Fixed bugs related to the report system.
+
+---
+
 ## Version Guidelines
 
 ### Categories
