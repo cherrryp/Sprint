@@ -102,7 +102,7 @@
           <span class="sidebar-text">Home</span>
         </NuxtLink>
 
-        <!-- Settings --
+        <!-- Settings -->
         <div class="group">
           <button
             @click="toggleSubmenu('ecom-menu')"
