@@ -100,6 +100,17 @@
                                     <span class="font-semibold">ดำเนินการเสร็จสิ้นเมื่อ : </span>
                                     <span class="text-gray-600">{{ formatDateTime(report?.resolvedAt) }}</span>
                                 </p>
+                                <p>
+                                    <span class="font-semibold">ปิดเคสเมื่อ : </span>
+                                    <span class="text-gray-600">{{ formatDateTime(report?.closedAt) }}</span>
+                                </p>
+                                <button
+                                class="px-4 py-2 text-white bg-gray-700 rounded-md hover:bg-gray-800 disabled:bg-gray-400"
+                                :disabled="report?.status !== 'RESOLVED' && report?.status !== 'REJECTED'"
+                                @click="closeReport"
+                                >
+                                    ปิดเคส
+                                </button>
                             </div>
                         </div>
 
@@ -368,6 +379,13 @@
                                 </button>
 
                                 <button
+                                class="px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
+                                @click="rejectReport"
+                                >
+                                    ปฏิเสธเคส
+                                </button>
+
+                                <button
                                 class="px-4 py-2 text-white bg-yellow-500 rounded-md hover:bg-yellow-600 disabled:bg-gray-400"
                                 :disabled="!selectedUsers.length"
                                 @click="issueYellowCard"
@@ -538,6 +556,63 @@ const issueYellowCard = async () => {
     }
 }
 
+const rejectReport = async () => {
+    try {
+        const config = useRuntimeConfig()
+        const token = useCookie('token')
+
+        await $fetch(`/reports/admin/${report.value.id}/status`, {
+        method: 'PATCH',
+        baseURL: config.public.apiBase,
+        headers: {
+            Authorization: `Bearer ${token.value}`
+        },
+        body: {
+            status: 'REJECTED',
+            adminNotes: adminComment.value || 'เคสถูกปฏิเสธ'
+        }
+        })
+
+        toast.success('ปฏิเสธเคสเรียบร้อย')
+        adminComment.value = ''
+        showManageSection.value = false
+
+        await fetchReport()
+
+    } catch (err) {
+        console.error(err)
+        toast.error('ไม่สามารถปฏิเสธเคสได้')
+    }
+    }
+
+const closeReport = async () => {
+    try {
+        const config = useRuntimeConfig()
+        const token = useCookie('token')
+
+        await $fetch(`/reports/admin/${report.value.id}/status`, {
+        method: 'PATCH',
+        baseURL: config.public.apiBase,
+        headers: {
+            Authorization: `Bearer ${token.value}`
+        },
+        body: {
+            status: 'CLOSED',
+            adminNotes: adminComment.value || 'เคสถูกปิดแล้ว'
+        }
+        })
+
+        toast.success('ปิดเคสเรียบร้อย')
+        showManageSection.value = false
+
+        await fetchReport()
+
+    } catch (err) {
+        console.error(err)
+        toast.error('ไม่สามารถปิดเคสได้')
+    }
+    }
+    
 async function fetchReport() {
     const config = useRuntimeConfig()
     const token = useCookie('token')

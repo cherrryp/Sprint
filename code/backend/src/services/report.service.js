@@ -118,12 +118,25 @@ const updateReportStatus = async (id, payload) => {
 
     if (!currentReport) return null;
 
+    if (currentReport.status === payload.status) {
+      throw new Error('Report already in this status');
+    }
+    
+    if (['RESOLVED', 'REJECTED'].includes(payload.status) && !payload.resolvedById) {
+      throw new Error('ResolvedById is required for decision');
+    }
+    
+    if (payload.status === 'CLOSED' && 
+      !['RESOLVED', 'REJECTED'].includes(currentReport.status)) {
+      throw new Error('Cannot close report before decision');
+    }
+
     const updateData = {
       status: payload.status,
       adminNotes: payload.adminNotes ?? currentReport.adminNotes,
     };
 
-    if (payload.status === 'RESOLVED' || payload.status === 'REJECTED') {
+    if (['RESOLVED', 'REJECTED'].includes(payload.status)) {
       updateData.resolvedById = payload.resolvedById;
       updateData.resolvedAt = new Date();
     }
@@ -142,10 +155,43 @@ const updateReportStatus = async (id, payload) => {
         reportCaseId: id,
         fromStatus: currentReport.status,
         toStatus: payload.status,
-        changedById: payload.resolvedById,
+        changedById: payload.resolvedById || currentReport.resolvedById,
         note: payload.note || `Status updated to ${payload.status}`
       }
     });
+
+    // ===== Notification Section =====
+    if (['REJECTED', 'RESOLVED'].includes(payload.status)) {
+
+      let bodyMessage = '';
+
+      if (payload.status === 'REJECTED') {
+        bodyMessage = 'เคสของคุณถูกปฏิเสธ';
+
+        if (payload.adminNotes && payload.adminNotes.trim().length > 0) {
+          bodyMessage += `\nเหตุผล: ${payload.adminNotes}`;
+        } else {
+          bodyMessage += '\nหากต้องการข้อมูลเพิ่มเติม กรุณาติดต่อฝ่ายสนับสนุน';
+        }
+
+      } else if (payload.status === 'RESOLVED') {
+        bodyMessage = 'เคสของคุณได้รับการดำเนินการแล้ว';
+
+        if (payload.adminNotes && payload.adminNotes.trim().length > 0) {
+          bodyMessage += `\nหมายเหตุ: ${payload.adminNotes}`;
+        }
+      }
+
+      await tx.notification.create({
+        data: {
+          userId: currentReport.reporterId,
+          type: 'SYSTEM',
+          title: 'ผลการดำเนินการรายงานของคุณ',
+          body: bodyMessage,
+          link: `/reports/${id}`
+        }
+      });
+    }
 
     // แจกใบเหลือง
     if (payload.status === 'RESOLVED') {
