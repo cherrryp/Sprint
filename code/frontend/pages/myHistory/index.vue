@@ -122,11 +122,10 @@
           <div
             v-for="report in reportCases"
             :key="report.id"
-            class="p-6 transition-all duration-300 cursor-pointer hover:shadow-lg"
-            @click.self="toggleDetails(report)"
+            class="p-6 transition-all duration-300"
           >
             <div class="flex items-start justify-between">
-              <div>
+              <div class="flex-1">
                 <h4 class="font-semibold text-gray-900">
                   {{ formatCategory(report.category) }}
                 </h4>
@@ -136,9 +135,18 @@
                 </div>
               </div>
 
-              <span :class="statusClass(report.status)">
-                {{ formatStatus(report.status) }}
-              </span>
+              <div class="flex items-center gap-3">
+                <span :class="statusClass(report.status)">
+                  {{ formatStatus(report.status) }}
+                </span>
+
+                <button
+                  @click="toggleDetails(report)"
+                  class="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  {{ selectedReport?.id === report.id ? 'ปิดรายละเอียด' : 'ดูรายละเอียด' }}
+                </button>
+              </div>
             </div>
 
             <!-- DETAIL -->
@@ -149,29 +157,47 @@
               <h5 class="mb-2 font-medium text-gray-900">
                 รายละเอียดการรายงาน
               </h5>
-              <div class="mt-4">
-                <div class="mt-4">
-                  <p
-                    class="p-3 text-sm text-gray-700 bg-gray-50 rounded-md whitespace-pre-line"
-                  >
-                    {{ report.description || "-" }}
-                  </p>
+              
+              <div class="p-4 mb-4 rounded-lg bg-gray-50">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <span class="text-sm font-medium text-gray-700">ผู้ถูกรายงาน:</span>
+                    <p class="text-sm text-gray-900">
+                      {{ report.driver?.firstName }} {{ report.driver?.lastName }}
+                    </p>
+                  </div>
+                  <div>
+                    <span class="text-sm font-medium text-gray-700">เลขที่การจอง:</span>
+                    <p class="text-sm text-gray-900">
+                      {{ report.bookingId || '-' }}
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              <div class="mt-4">
+                <h6 class="mb-2 text-sm font-medium text-gray-700">คำอธิบาย:</h6>
+                <p
+                  class="p-3 text-sm text-gray-700 bg-gray-50 rounded-md whitespace-pre-line"
+                >
+                  {{ report.description || "-" }}
+                </p>
               </div>
 
               <!-- EVIDENCE LIST -->
               <!-- หลักฐานเดิม -->
-              <div
-                v-if="
-                  Array.isArray(selectedReport?.evidences) &&
-                  selectedReport.evidences.length
-                "
-              >
-                <label class="block mb-2 text-sm font-medium text-gray-700">
-                  หลักฐานที่เคยแนบไว้
-                </label>
-
-                <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <div class="mt-4">
+                <h6 class="mb-2 text-sm font-medium text-gray-700">
+                  หลักฐานที่แนบไว้
+                </h6>
+                
+                <div
+                  v-if="
+                    Array.isArray(selectedReport?.evidences) &&
+                    selectedReport.evidences.length > 0
+                  "
+                  class="grid grid-cols-2 gap-3 md:grid-cols-3"
+                >
                   <div v-for="ev in selectedReport.evidences" :key="ev.id">
                     <img
                       v-if="ev.type === 'IMAGE'"
@@ -197,39 +223,81 @@
                     </a>
                   </div>
                 </div>
+                
+                <div v-else class="p-3 text-sm text-gray-500 bg-gray-50 rounded-md">
+                  ยังไม่มีหลักฐาน
+                </div>
               </div>
 
               <!-- แนบหลักฐานเพิ่ม -->
-              <div class="mt-4">
-                <label class="block mb-1 text-sm text-gray-700">
-                  แนบหลักฐานเพิ่มเติม
-                </label>
+              <div v-if="canAddEvidence(report.status)" class="p-4 mt-4 border border-blue-300 rounded-lg bg-blue-50">
+                <h6 class="mb-2 text-sm font-semibold text-blue-900">
+                  📎 ส่งหลักฐานเพิ่มเติม
+                </h6>
+                <p class="mb-3 text-xs text-blue-700">
+                  หากคุณมีหลักฐานเพิ่มเติม (รูปภาพหรือวิดีโอ) สามารถอัปโหลดได้ที่นี่
+                  <br>
+                  <span class="text-blue-600">• รูปภาพและวิดีโอ - แต่ละชนิดไม่เกิน 3 ไฟล์</span>
+                  <br>
+                  <span class="text-blue-600">• ขนาดไม่เกิน 10MB ต่อไฟล์</span>
+                </p>
+
+                <!-- Error Message -->
+                <div v-if="errorMessage" class="p-3 mb-3 text-sm text-red-700 bg-red-100 border border-red-300 rounded-md">
+                  ⚠️ {{ errorMessage }}
+                </div>
+
+                <!-- Loading Indicator -->
+                <div v-if="uploadingReportId === report.id" class="p-4 mb-3 text-center bg-white border border-blue-300 rounded-md">
+                  <div class="inline-block w-8 h-8 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                  <p class="mt-2 text-sm text-blue-600">กำลังอัปโหลดไฟล์...</p>
+                </div>
 
                 <input
+                  :id="`file-${report.id}`"
                   type="file"
                   multiple
-                  @change="handleFileChange"
-                  class="w-full text-sm"
+                  accept="image/*,video/*"
+                  @change="handleFileChange($event, report.id)"
+                  :disabled="uploadingReportId === report.id"
+                  class="w-full p-2 text-sm border border-blue-300 rounded-md disabled:bg-gray-200 disabled:cursor-not-allowed"
                 />
-                <button
-                  v-if="canAddEvidence(report.status)"
-                  @click="uploadEvidence(report.id)"
-                  class="px-4 py-2 mt-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                >
-                  อัปโหลดหลักฐาน
-                </button>
-
-                <!-- preview ไฟล์ใหม่ -->
+                
+                <!-- Preview ไฟล์ใหม่ -->
                 <div
-                  v-if="selectedFiles.length"
+                  v-if="selectedFiles.length > 0"
                   class="grid grid-cols-2 gap-3 mt-3 md:grid-cols-3"
                 >
                   <div v-for="(file, index) in selectedFiles" :key="index">
-                    <div class="p-2 text-xs text-gray-700 bg-gray-100 rounded">
-                      {{ file.name }}
+                    <div class="relative">
+                      <img
+                        v-if="file.type.startsWith('image')"
+                        :src="URL.createObjectURL(file)"
+                        class="object-cover w-full border border-gray-300 rounded-lg aspect-video"
+                      />
+                      <video
+                        v-else-if="file.type.startsWith('video')"
+                        :src="URL.createObjectURL(file)"
+                        class="object-cover w-full border border-gray-300 rounded-lg aspect-video"
+                        controls
+                      ></video>
+                      <p class="mt-1 text-xs text-gray-700 truncate">{{ file.name }}</p>
                     </div>
                   </div>
                 </div>
+
+                <button
+                  @click="uploadEvidence(report.id)"
+                  :disabled="uploadingReportId === report.id || selectedFiles.length === 0"
+                  class="w-full px-4 py-2 mt-3 text-sm font-medium text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {{ uploadingReportId === report.id ? 'กำลังอัปโหลด...' : 'อัปโหลดหลักฐาน' }}
+                </button>
+              </div>
+
+              <!-- สถานะปิดแล้ว -->
+              <div v-else class="p-3 mt-4 text-sm text-gray-600 border border-gray-300 rounded-lg bg-gray-50">
+                ℹ️ เคสนี้อยู่ในสถานะ {{ formatStatus(report.status) }} ไม่สามารถเพิ่มหลักฐานได้แล้ว
               </div>
 
               <!-- ADMIN NOTES -->
@@ -308,17 +376,61 @@ const canAddEvidence = (status) => {
   return !["RESOLVED", "REJECTED", "CLOSED"].includes(status);
 };
 
-const handleFileChange = (event) => {
-  selectedFiles.value = Array.from(event.target.files);
+const handleFileChange = (event, reportId) => {
+  const files = Array.from(event.target.files);
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  errorMessage.value = ''; // ล้าง error ก่อน
+
+  // ตรวจสอบว่ามีไฟล์หรือไม่
+  if (files.length === 0) {
+    selectedFiles.value = [];
+    return;
+  }
+
+  // ตรวจสอบขนาดไฟล์
+  for (const file of files) {
+    if (file.size > MAX_FILE_SIZE) {
+      errorMessage.value = `❌ ไฟล์ "${file.name}" มีขนาด ${(file.size / (1024 * 1024)).toFixed(2)}MB ซึ่งใหญ่เกิน 10MB`;
+      event.target.value = '';
+      selectedFiles.value = [];
+      return;
+    }
+  }
+
+  // ตรวจสอบจำนวนแต่ละประเภท
+  const imageFiles = files.filter(f => f.type.startsWith('image'));
+  const videoFiles = files.filter(f => f.type.startsWith('video'));
+
+  if (imageFiles.length > 3) {
+    errorMessage.value = `❌ คุณเลือกรูปภาพ ${imageFiles.length} ไฟล์ ซึ่งเกินกำหนด (สูงสุด 3 ไฟล์)`;
+    event.target.value = '';
+    selectedFiles.value = [];
+    return;
+  }
+
+  if (videoFiles.length > 3) {
+    errorMessage.value = `❌ คุณเลือกวิดีโอ ${videoFiles.length} ไฟล์ ซึ่งเกินกำหนด (สูงสุด 3 ไฟล์)`;
+    event.target.value = '';
+    selectedFiles.value = [];
+    return;
+  }
+
+  // ผ่านการตรวจสอบแล้ว
+  selectedFiles.value = files;
+  errorMessage.value = '';
 };
 
 const uploadToCloudinary = async (file) => {
+  const config = useRuntimeConfig();
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "reports_unsigned");
+  formData.append("upload_preset", config.public.cloudinaryUploadPreset);
+
+  const resourceType = file.type.startsWith('video') ? 'video' : 'image';
 
   const response = await fetch(
-    "https://api.cloudinary.com/v1_1/dvxmlgoz5/auto/upload",
+    `https://api.cloudinary.com/v1_1/${config.public.cloudinaryCloudName}/${resourceType}/upload`,
     {
       method: "POST",
       body: formData,
@@ -326,7 +438,9 @@ const uploadToCloudinary = async (file) => {
   );
 
   if (!response.ok) {
-    throw new Error("อัปโหลด Cloudinary ไม่สำเร็จ");
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Cloudinary error:', errorData);
+    throw new Error(errorData.error?.message || "อัปโหลด Cloudinary ไม่สำเร็จ");
   }
 
   return response.json();
@@ -341,14 +455,16 @@ const uploadEvidence = async (reportId) => {
     if (!targetReport) return;
 
     if (!canAddEvidence(targetReport.status)) {
-      alert("ไม่สามารถเพิ่มหลักฐานในสถานะนี้ได้");
+      errorMessage.value = "ไม่สามารถเพิ่มหลักฐานในสถานะนี้ได้";
       return;
     }
 
     uploadingReportId.value = reportId;
+    errorMessage.value = '';
 
     const newEvidences = [];
 
+    // อัปโหลดไฟล์ทีละไฟล์
     for (const file of selectedFiles.value) {
       const cloudinaryData = await uploadToCloudinary(file);
 
@@ -361,6 +477,7 @@ const uploadEvidence = async (reportId) => {
       });
     }
 
+    // บันทึกหลักฐานไปที่ backend
     const response = await fetch(
       `http://localhost:3000/api/reports/${reportId}/evidence`,
       {
@@ -374,15 +491,31 @@ const uploadEvidence = async (reportId) => {
     );
 
     if (!response.ok) {
-      throw new Error("บันทึกหลักฐานไม่สำเร็จ");
+      const errorData = await response.json();
+      throw new Error(errorData.message || "บันทึกหลักฐานไม่สำเร็จ");
     }
 
+    // อัปเดต UI
     targetReport.evidences = [
       ...(targetReport.evidences || []),
       ...newEvidences,
     ];
 
+    // ล้างไฟล์และแสดงข้อความสำเร็จ
     selectedFiles.value = [];
+    const fileInput = document.getElementById(`file-${reportId}`);
+    if (fileInput) fileInput.value = '';
+    
+    // แสดงข้อความสำเร็จ
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    successDiv.textContent = '✓ อัปโหลดหลักฐานสำเร็จ';
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+      successDiv.remove();
+    }, 3000);
+
   } catch (err) {
     errorMessage.value = err.message;
   } finally {

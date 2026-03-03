@@ -232,20 +232,39 @@
                   </button>
 
                   <button
-                    v-if="trip.status === 'pending'"
+                    v-if="trip.status === 'pending' && !hasActiveReport(trip)"
                     @click.stop="openReportModal(trip)"
                     class="px-4 py-2 text-sm text-yellow-700 transition duration-200 border border-yellow-300 rounded-md hover:bg-yellow-50"
                   >
                     รายงานปัญหา
                   </button>
 
+                  <button
+                    v-if="trip.status === 'pending' && hasActiveReport(trip)"
+                    @click.stop="router.push('/myHistory')"
+                    class="px-4 py-2 text-sm text-gray-600 transition duration-200 border border-gray-400 rounded-md cursor-pointer hover:bg-gray-50"
+                    title="รายงานไปแล้ว สามารถเพิ่มหลักฐานได้ที่ประวัติ"
+                  >
+                    ดูประวัติการรายงาน
+                  </button>
+
                   <!-- CONFIRMED: เพิ่มปุ่มยกเลิก + คงปุ่มแชท+รายงาน -->
                   <template v-else-if="trip.status === 'confirmed'">
                     <button
+                      v-if="!hasActiveReport(trip)"
                       @click.stop="openReportModal(trip)"
                       class="px-4 py-2 text-sm text-yellow-700 transition duration-200 border border-yellow-300 rounded-md hover:bg-yellow-50"
                     >
                       รายงานปัญหา
+                    </button>
+
+                    <button
+                      v-if="hasActiveReport(trip)"
+                      @click.stop="router.push('/myHistory')"
+                      class="px-4 py-2 text-sm text-gray-600 transition duration-200 border border-gray-400 rounded-md cursor-pointer hover:bg-gray-50"
+                      title="รายงานไปแล้ว สามารถเพิ่มหลักฐานได้ที่ประวัติ"
+                    >
+                      ดูประวัติการรายงาน
                     </button>
 
                     <button
@@ -264,10 +283,20 @@
                   <!-- REJECTED / CANCELLED: ลบได้ -->
                   <template v-else-if="trip.status === 'rejected'">
                     <button
+                      v-if="!hasActiveReport(trip)"
                       @click.stop="openReportModal(trip)"
                       class="px-3 py-1.5 text-xs text-yellow-700 border border-yellow-300 rounded-md hover:bg-yellow-50"
                     >
                       รายงานปัญหา
+                    </button>
+
+                    <button
+                      v-if="hasActiveReport(trip)"
+                      @click.stop="router.push('/myHistory')"
+                      class="px-3 py-1.5 text-xs text-gray-600 border border-gray-400 rounded-md cursor-pointer hover:bg-gray-50"
+                      title="รายงานไปแล้ว สามารถเพิ่มหลักฐานได้ที่ประวัติ"
+                    >
+                      ดูประวัติ
                     </button>
 
                     <button
@@ -460,14 +489,51 @@
           <!-- Evidence -->
           <div>
             <label class="block mb-1 text-sm text-gray-700">
-              แนบหลักฐาน (ถ้ามี)
+              แนบหลักฐาน (รูปภาพและวิดีโอ แต่ละชนิดไม่เกิน 3 ไฟล์)
             </label>
             <input
               type="file"
               multiple
+              accept="image/*,video/*"
               @change="handleEvidenceUpload"
               class="w-full text-sm"
             />
+            <p class="mt-1 text-xs text-gray-500">
+              รองรับ: รูปภาพและวิดีโอ (แต่ละชนิดไม่เกิน 3 ไฟล์, ขนาดไม่เกิน 10MB/ไฟล์)
+            </p>
+
+            <!-- Preview ไฟล์ที่เลือก -->
+            <div
+              v-if="reportForm.evidences.length > 0"
+              class="grid grid-cols-2 gap-3 mt-3 md:grid-cols-3"
+            >
+              <div
+                v-for="(evidence, index) in reportForm.evidences"
+                :key="index"
+                class="relative"
+              >
+                <img
+                  v-if="evidence.type === 'IMAGE'"
+                  :src="evidence.previewUrl"
+                  class="object-cover w-full border border-gray-300 rounded-lg aspect-video"
+                />
+                <video
+                  v-else-if="evidence.type === 'VIDEO'"
+                  :src="evidence.previewUrl"
+                  class="object-cover w-full border border-gray-300 rounded-lg aspect-video"
+                  controls
+                ></video>
+                <button
+                  @click="removeEvidence(index)"
+                  class="absolute top-1 right-1 px-2 py-1 text-xs text-white bg-red-500 rounded-full hover:bg-red-600"
+                >
+                  ✕
+                </button>
+                <p class="mt-1 text-xs text-gray-600 truncate">
+                  {{ evidence.fileName }}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -503,15 +569,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onActivated } from "vue";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import buddhistEra from "dayjs/plugin/buddhistEra";
 import ConfirmModal from "~/components/ConfirmModal.vue";
 import { useToast } from "~/composables/useToast";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
+const route = useRoute();
 
 const isSubmittingReport = ref(false);
 const isReportModalOpen = ref(false);
@@ -563,14 +630,23 @@ const reportableUsers = computed(() => {
 });
 
 const blockedReportedUserIds = computed(() => {
-  if (!selectedReportTrip.value?.reports) return [];
+  if (!selectedReportTrip.value?.reportCases) return [];
 
-  return selectedReportTrip.value.reports
+  return selectedReportTrip.value.reportCases
     .filter((r) =>
       ["FILED", "UNDER_REVIEW", "INVESTIGATING"].includes(r.status),
     )
-    .map((r) => r.reportedUserId);
+    .map((r) => r.driverId);
 });
+
+// เช็คว่า trip นี้มีการรายงานที่ยังไม่ได้ปิดหรือยัง
+const hasActiveReport = (trip) => {
+  if (!trip?.reportCases || trip.reportCases.length === 0) return false;
+  
+  return trip.reportCases.some((r) =>
+    ["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED"].includes(r.status)
+  );
+};
 
 const reportForm = ref({
   bookingId: null,
@@ -618,66 +694,190 @@ function getCurrentUserId() {
   return payload.id;
 }
 
+async function uploadToCloudinary(file) {
+  const config = useRuntimeConfig();
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', config.public.cloudinaryUploadPreset);
+
+  // ใช้ endpoint ที่เหมาะสมตามประเภทไฟล์
+  const resourceType = file.type.startsWith('video') ? 'video' : 'image';
+  
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${config.public.cloudinaryCloudName}/${resourceType}/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Cloudinary error:', errorData);
+    throw new Error(errorData.error?.message || 'อัปโหลดไฟล์ไม่สำเร็จ');
+  }
+
+  return response.json();
+}
+
 async function submitReport() {
   if (isSubmittingReport.value) return;
 
   try {
+    console.log('[submitReport] reportForm:', JSON.parse(JSON.stringify(reportForm.value)));
+
     if (!reportForm.value.reportedUserIds.length) {
+      console.log('[submitReport] ไม่ได้เลือกผู้ที่ต้องการรายงาน');
       toast.error("กรุณาเลือกผู้ที่ต้องการรายงาน");
       return;
     }
 
     if (!reportForm.value.category) {
+      console.log('[submitReport] ไม่ได้เลือกประเภทปัญหา');
       toast.error("กรุณาเลือกประเภทปัญหา");
       return;
     }
 
     if (
       !reportForm.value.description ||
-      reportForm.value.description.trim().length < 5
+      reportForm.value.description.trim().length < 10
     ) {
-      toast.error("รายละเอียดต้องมีอย่างน้อย 5 ตัวอักษร");
+      console.log('[submitReport] รายละเอียดไม่ครบ 10 ตัวอักษร');
+      toast.error("รายละเอียดต้องมีอย่างน้อย 10 ตัวอักษร");
       return;
     }
+
     const hasBlockedUser = reportForm.value.reportedUserIds.some((id) =>
       blockedReportedUserIds.value.includes(id),
     );
 
     if (hasBlockedUser) {
+      console.log('[submitReport] มีผู้ใช้ที่ถูก block อยู่:', blockedReportedUserIds.value);
       toast.error("ไม่สามารถรายงานซ้ำได้ กรุณารอให้การตรวจสอบเสร็จสิ้น");
       return;
     }
 
+    console.log('[submitReport] ผ่านการ validate ทั้งหมด');
     isSubmittingReport.value = true;
 
-    await $api("/reports", {
+    // อัปโหลดไฟล์ไปที่ Cloudinary ก่อน
+    const evidences = [];
+    if (reportForm.value.evidences.length > 0) {
+      console.log('[submitReport] เริ่มอัปโหลดไฟล์', reportForm.value.evidences.length, 'ไฟล์');
+      toast.info('กำลังอัปโหลดไฟล์...');
+      
+      for (const evidence of reportForm.value.evidences) {
+        try {
+          console.log('[submitReport] อัปโหลด:', evidence.fileName);
+          const cloudinaryData = await uploadToCloudinary(evidence.file);
+          console.log('[submitReport] อัปโหลดสำเร็จ:', cloudinaryData.secure_url);
+          evidences.push({
+            type: evidence.type,
+            url: cloudinaryData.secure_url,
+            fileName: evidence.fileName,
+            mimeType: evidence.mimeType,
+            fileSize: evidence.fileSize,
+          });
+        } catch (err) {
+          console.error('[submitReport] Error uploading file:', err);
+          toast.error(`ไม่สามารถอัปโหลดไฟล์ ${evidence.fileName}`);
+          throw err;
+        }
+      }
+      console.log('[submitReport] อัปโหลดไฟล์สำเร็จทั้งหมด:', evidences);
+    }
+
+    // ส่งรายงานพร้อม URL ของไฟล์
+    const reportPayload = {
+      bookingId: reportForm.value.bookingId || null,
+      routeId: reportForm.value.routeId || null,
+      reportedUserIds: reportForm.value.reportedUserIds,
+      category: reportForm.value.category,
+      description: reportForm.value.description.trim(),
+    };
+    console.log('[submitReport] ส่ง report payload:', reportPayload);
+
+    const response = await $api("/reports", {
       method: "POST",
-      body: {
-        bookingId: reportForm.value.bookingId || null,
-        routeId: reportForm.value.routeId || null,
-        reportedUserIds: reportForm.value.reportedUserIds,
-        category: reportForm.value.category,
-        description: reportForm.value.description.trim(),
-        evidences: reportForm.value.evidences,
-      },
+      body: reportPayload,
     });
 
-    toast.success("ส่งรายงานสำเร็จ");
+    console.log('[submitReport] Response จากการสร้าง report:', response);
+    
+    // รองรับทั้งกรณี response เป็น Array หรือ Object
+    const reportData = Array.isArray(response) ? response[0] : response;
+    console.log('[submitReport] reportData:', reportData);
+    
+    // ถ้ามี groupId ใช้ groupId, ไม่มีใช้ id
+    const reportId = reportData?.groupId || reportData?.id;
+    console.log('[submitReport] reportId (groupId || id):', reportId);
+
+    // อัปโหลดหลักฐาน (ถ้ามี)
+    if (evidences.length > 0 && reportId) {
+      console.log('[submitReport] เริ่มส่งหลักฐาน');
+      try {
+        console.log('[submitReport] reportId ที่จะใช้:', reportId);
+        
+        const evidencePayload = { evidences };
+        console.log('[submitReport] evidence payload:', evidencePayload);
+        console.log('[submitReport] endpoint:', `/reports/${reportId}/evidence`);
+        
+        const evidenceResponse = await $api(`/reports/${reportId}/evidence`, {
+          method: "POST",
+          body: evidencePayload,
+        });
+        console.log('[submitReport] Response จากการส่งหลักฐาน:', evidenceResponse);
+      } catch (err) {
+        console.error('[submitReport]  Error uploading evidences:', err);
+        console.error('[submitReport] Error details:', err.data || err.message);
+        // ไม่ throw error เพราะรายงานส่งไปแล้ว
+      }
+    } else if (evidences.length > 0 && !reportId) {
+      console.log('[submitReport] ไม่พบ reportId - ไม่สามารถส่งหลักฐานได้');
+    }
+
+    console.log('[submitReport] สำเร็จ! กำลังปิด modal และ refresh');
+    toast.success(
+      "ส่งรายงานสำเร็จ\n\nหากต้องการเพิ่มหลักฐานเพิ่มเติม\nสามารถไปที่หน้าประวัติการรายงานได้",
+      { duration: 5000 }
+    );
+    
     closeReportModal();
 
-    router.push("/myHistory");
+    // รีเฟรชข้อมูลเพื่ออัพเดทสถานะว่ารายงานแล้ว
+    await fetchMyTrips();
+
+    // นำทางไปหน้าประวัติ
+    setTimeout(() => {
+      console.log('[submitReport] Navigate to /myHistory');
+      router.push("/myHistory");
+    }, 1500);
   } catch (error) {
-    console.error(error);
-    toast.error(error?.data?.message || "ไม่สามารถส่งรายงานได้");
+    console.error('[submitReport] Error:', error);
+    console.error('[submitReport] Error data:', error?.data);
+    console.error('[submitReport] Error message:', error?.message);
+    const errorMessage = error?.data?.message || error?.message || "ไม่สามารถส่งรายงานได้";
+    toast.error(errorMessage);
   } finally {
     isSubmittingReport.value = false;
+    console.log('[submitReport] จบฟังก์ชัน submitReport');
   }
 }
 
 function handleEvidenceUpload(event) {
   const files = Array.from(event.target.files);
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-  reportForm.value.evidences = files.map((file) => {
+  // ตรวจสอบขนาดไฟล์
+  for (const file of files) {
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`ไฟล์ ${file.name} มีขนาดใหญ่เกิน 10MB`);
+      event.target.value = ''; // รีเซ็ต input
+      return;
+    }
+  }
+
+  const newEvidences = files.map((file) => {
     const type = file.type.startsWith("image")
       ? "IMAGE"
       : file.type.startsWith("video")
@@ -687,10 +887,36 @@ function handleEvidenceUpload(event) {
     return {
       type,
       file,
-      previewUrl: URL.createObjectURL(file), // 👈 เพิ่มอันนี้
+      previewUrl: URL.createObjectURL(file),
       fileName: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
     };
   });
+
+  // ตรวจสอบจำนวนแต่ละประเภท
+  const allEvidences = [...reportForm.value.evidences, ...newEvidences];
+  const imageCount = allEvidences.filter(e => e.type === 'IMAGE').length;
+  const videoCount = allEvidences.filter(e => e.type === 'VIDEO').length;
+
+  if (imageCount > 3) {
+    toast.error('รูปภาพไม่เกิน 3 ไฟล์');
+    event.target.value = '';
+    return;
+  }
+
+  if (videoCount > 3) {
+    toast.error('วิดีโอไม่เกิน 3 ไฟล์');
+    event.target.value = '';
+    return;
+  }
+
+  reportForm.value.evidences = allEvidences;
+  event.target.value = ''; // รีเซ็ตเพื่อให้เลือกไฟล์เดิมได้อีก
+}
+
+function removeEvidence(index) {
+  reportForm.value.evidences.splice(index, 1);
 }
 
 // Setup dayjs for Thai locale
@@ -847,7 +1073,7 @@ async function fetchMyTrips() {
         id: b.id,
         routeId: b.route.id,
         driverId: driverData.id,
-        reports: b.reports || [],
+        reportCases: b.reportCases || [],
 
         status: String(b.status || "").toLowerCase(),
         origin:
@@ -870,12 +1096,12 @@ async function fetchMyTrips() {
         passengers: Array.isArray(b.route.bookings)
           ? b.route.bookings
               .map((bk) => {
-                if (!bk.user) return null; // กันกรณีไม่มี include user
+                if (!bk.passenger) return null; // กันกรณีไม่มี include passenger
                 return {
-                  id: bk.user.id,
-                  firstName: bk.user.firstName || "",
-                  lastName: bk.user.lastName || "",
-                  name: `${bk.user.firstName || ""} ${bk.user.lastName || ""}`.trim(),
+                  id: bk.passenger.id,
+                  firstName: bk.passenger.firstName || "",
+                  lastName: bk.passenger.lastName || "",
+                  name: `${bk.passenger.firstName || ""} ${bk.passenger.lastName || ""}`.trim(),
                 };
               })
               .filter(Boolean)
@@ -1285,10 +1511,12 @@ onMounted(() => {
   // ถ้า script โหลดแล้ว
   if (window.google?.maps) {
     initializeMap();
-    fetchMyTrips().then(() => {
-      // ถ้ามีข้อมูลแล้วและยังไม่ได้เลือก ให้โชว์แผนที่ของรายการแรกในแท็บปัจจุบัน
-      if (filteredTrips.value.length) updateMap(filteredTrips.value[0]);
-    });
+    // ถ้ามี query.refresh ให้ watch จัดการ ไม่ fetch ที่นี่
+    if (!route.query.refresh) {
+      fetchMyTrips().then(() => {
+        if (filteredTrips.value.length) updateMap(filteredTrips.value[0]);
+      });
+    }
     return;
   }
 
@@ -1298,11 +1526,39 @@ onMounted(() => {
       delete window[GMAPS_CB];
     } catch {}
     initializeMap();
-    fetchMyTrips().then(() => {
-      if (filteredTrips.value.length) updateMap(filteredTrips.value[0]);
-    });
+    if (!route.query.refresh) {
+      fetchMyTrips().then(() => {
+        if (filteredTrips.value.length) updateMap(filteredTrips.value[0]);
+      });
+    }
   };
 });
+
+// Refresh ข้อมูลทุกครั้งที่เข้าหน้า (เมื่อ navigate กลับมา)
+onActivated(() => {
+  fetchMyTrips().then(() => {
+    if (filteredTrips.value.length && selectedTripId.value) {
+      const trip = allTrips.value.find(t => t.id === selectedTripId.value);
+      if (trip) updateMap(trip);
+    } else if (filteredTrips.value.length) {
+      updateMap(filteredTrips.value[0]);
+    }
+  });
+});
+
+// Watch query params เพื่อ refresh เมื่อมี query.refresh (จาก navigate หลังจอง)
+watch(() => route.query.refresh, (newVal) => {
+  if (newVal) {
+    console.log('[myTrip] Detected refresh query, fetching trips...');
+    // Fetch ข้อมูลใหม่เมื่อมี refresh query
+    fetchMyTrips().then(() => {
+      console.log('[myTrip] Fetched trips:', allTrips.value.length, 'trips');
+      if (filteredTrips.value.length) {
+        updateMap(filteredTrips.value[0]);
+      }
+    });
+  }
+}, { immediate: true });
 
 function initializeMap() {
   if (!mapContainer.value || gmap) return;
