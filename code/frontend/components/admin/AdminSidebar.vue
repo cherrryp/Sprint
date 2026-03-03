@@ -77,7 +77,7 @@
         </NuxtLink>
 
         <NuxtLink
-        to="/admin/reports-dashboard"
+        to="/admin/exports"
           class="sidebar-item flex items-center gap-3 px-3 py-2.5 text-gray-700 rounded-lg hover:bg-blue-50"
           active-class="font-semibold text-blue-600 bg-blue-50"
         >
