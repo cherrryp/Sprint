@@ -229,7 +229,7 @@ async function submitRequest() {
 
 async function downloadLog(id, format) {
   try {
-    toast.info('กำลังดาวน์โหลด', 'กรุณารอสักครู่ระบบกำลังดึงไฟล์...');
+    toast.info('กำลังดาวน์โหลด', 'กรุณารอสักครู่ระบบกำลังดึงไฟล์');
     
     const blob = await $fetch(`/logs/exports/${id}/download`, {
       baseURL: config.public.apiBase,
@@ -253,7 +253,7 @@ async function downloadLog(id, format) {
     toast.success('สำเร็จ', 'ดาวน์โหลดไฟล์เรียบร้อยแล้ว');
   } catch (error) {
     console.error("Download Error:", error);
-    toast.error('เกิดข้อผิดพลาด', 'ไม่สามารถดาวน์โหลดไฟล์ได้ หรือไฟล์อาจหมดอายุระบบถูกลบทิ้งไปแล้ว');
+    toast.error('เกิดข้อผิดพลาด', 'ไม่สามารถดาวน์โหลดไฟล์ได้');
   }
 }
 
