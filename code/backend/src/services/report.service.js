@@ -6,7 +6,8 @@ const createReportCase = async (data) => {
   const { reporterId, reportedUserIds, bookingId, routeId, category, description } = data;
 
   //เพิ่มเช็คกันรายงานซ้ำ
-  const activeStatuses = ['FILED', 'UNDER_REVIEW', 'INVESTIGATING'];
+  //const activeStatuses = ['FILED', 'UNDER_REVIEW', 'INVESTIGATING'];
+  const activeStatuses = ['FILED', 'UNDER_REVIEW'];
 
   const existingReports = await prisma.reportCase.findMany({
     where: {

@@ -429,12 +429,12 @@ const uniquePassengers = computed(() => {
 
 // คำนวณรายการผู้ใช้ที่ถูกรายงานเท่านั้น (แสดงเฉพาะคนที่ถูก report จริงๆ)
 const uniqueUsers = computed(() => {
-  console.log("🟡 [FRONTEND DEBUG] กำลังคำนวณ uniqueUsers, ข้อมูลต้นทาง:", report.value);
+  // console.log("🟡 [FRONTEND DEBUG] กำลังคำนวณ uniqueUsers, ข้อมูลต้นทาง:", report.value);
 
   if (!report.value) return [];
   
   if (report.value.reportedUsers && report.value.reportedUsers.length > 0) {
-    console.log("🟡 [FRONTEND DEBUG] เข้าเงื่อนไขที่ 1 (แบบ Group มีหลายคน):", report.value.reportedUsers.length, "คน");
+    // console.log("🟡 [FRONTEND DEBUG] เข้าเงื่อนไขที่ 1 (แบบ Group มีหลายคน):", report.value.reportedUsers.length, "คน");
     return report.value.reportedUsers.map(user => ({
       id: user.id,
       firstName: user.firstName,
@@ -444,7 +444,7 @@ const uniqueUsers = computed(() => {
   }
   
   if (report.value.driver) {
-    console.log("🟡 [FRONTEND DEBUG] เข้าเงื่อนไขที่ 2 (แบบเดี่ยว / ของเก่า): 1 คน");
+    // console.log("🟡 [FRONTEND DEBUG] เข้าเงื่อนไขที่ 2 (แบบเดี่ยว / ของเก่า): 1 คน");
     return [{
       id: report.value.driver.id,
       firstName: report.value.driver.firstName,
@@ -453,7 +453,7 @@ const uniqueUsers = computed(() => {
     }];
   }
   
-  console.log("🟡 [FRONTEND DEBUG] หาใครไม่เจอเลย คืนค่า Array ว่าง");
+  // console.log("🟡 [FRONTEND DEBUG] หาใครไม่เจอเลย คืนค่า Array ว่าง");
   return [];
 });
 
