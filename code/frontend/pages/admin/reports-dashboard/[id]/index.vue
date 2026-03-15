@@ -49,7 +49,7 @@
                                 <span class="text-gray-600">{{ report?.routeId }}</span>
                             </p>
                             <p>
-                                <span class="font-semibold">Case Status ID : </span>
+                                <span class="font-semibold">Case Status : </span>
                                 <span class="text-gray-600">{{ report?.status }} </span>
                             </p>
                             <p>
@@ -120,33 +120,44 @@
                     
                     <!-- ฝั่งขวา: แสดงรายละเอียดการ Report -->
                     <div class="lg:col-span-3 p-6 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+
                         <div>
-                            <p>
-                                <span class="font-semibold">หัวข้อ : </span>
-                                <span class="text-gray-600">
-                                {{ formatCategory(report?.category) }}
-                                </span>
+                            <p class="text-gray-500">หัวข้อ</p>
+                            <p class="font-medium text-gray-900">
+                            {{ formatCategory(report?.category) }}
                             </p>
-                            <p>
-                                <span class="font-semibold">ผู้ใช้ที่แจ้งรายงาน : </span>
-                                <span class="text-gray-600">
-                                    {{ report?.reporter?.firstName }} {{ report?.reporter?.lastName }}
-                                </span>
-                            </p>
-                            <p>
-                                <span class="font-semibold">สถานะการรายงาน : </span>
-                                <span
-                                class="px-2 py-1 text-xs font-medium rounded-full"
-                                :class="{
+                        </div>
+
+                        <div>
+                            <p class="text-gray-500">สถานะการรายงาน</p>
+                            <span
+                            class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                            :class="{
                                 'bg-yellow-100 text-yellow-700': report?.status === 'PENDING',
                                 'bg-blue-100 text-blue-700': report?.status === 'UNDER_REVIEW',
                                 'bg-green-100 text-green-700': report?.status === 'RESOLVED',
                                 'bg-red-100 text-red-700': report?.status === 'REJECTED'
-                                }"
-                                >
-                                    {{ report?.status }}
-                                </span>
+                            }"
+                            >
+                            {{ report?.status }}
+                            </span>
+                        </div>
+
+                        <div>
+                            <p class="text-gray-500">ผู้ใช้ที่แจ้งรายงาน</p>
+                            <p class="font-medium text-gray-900">
+                            {{ report?.reporter?.firstName }} {{ report?.reporter?.lastName }}
                             </p>
+                        </div>
+
+                        <div>
+                            <p class="text-gray-500">ผู้ใช้ที่ถูกรายงาน</p>
+                            <p class="font-medium text-gray-900">
+                            {{ report?.reportedUser?.firstName }} {{ report?.reportedUser?.lastName }}
+                            </p>
+                        </div>
+
                         </div>
                         <div class="border-t border-gray-300 my-6"></div>
                         <div>
