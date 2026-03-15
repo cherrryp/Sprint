@@ -4,7 +4,7 @@ Suite Setup    Open Browser And Login
 Suite Teardown    Close Browser
 
 *** Variables ***
-${FRONT_URL}    http://cs-softeng-sec1-g4.cpkku.com
+${FRONT_URL}    https://csse1469.cpkku.com
 ${BROWSER}      Chrome
 ${USERNAME}     admin123
 ${PASSWORD}     123456789

@@ -4,14 +4,14 @@ Suite Setup    Open Browser And Login As User
 Suite Teardown    Close Browser
 
 *** Variables ***
-${FRONT_URL}    http://cs-softeng-sec1-g4.cpkku.com
+${FRONT_URL}    https://csse1469.cpkku.com
 ${BROWSER}      Chrome
 ${USERNAME}     mark___
 ${PASSWORD}     Mark1234
 ${MY_HISTORY_PATH}    /myHistory
 
-${VALID_IMAGE}      ${CURDIR}/test-report.jpg
-${LARGE_FILE}       ${CURDIR}/large-file.gif
+${VALID_IMAGE}      ${CURDIR}/file-test/test-report.jpg
+${LARGE_FILE}       ${CURDIR}/file-test/large-file.gif
 
 
 *** Keywords ***
