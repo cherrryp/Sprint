@@ -619,16 +619,25 @@ All notable changes to this project will be documented in this file.
 - Added Latest Report column in Trip Report table to display the most recent report timestamp for each trip.
 - Added Status summary cards showing the number of reports by status (Pending, Under Review, Resolved, Rejected).
 - Added status filter cards that allow quick filtering by report status.
+- Implemented Admin API endpoints for managing reports, including assigning, resolving, and rejecting cases.
+- Added API to retrieve all reports for the Admin Dashboard.
 
 ### Changed
-- Updated Total Reports calculation to count the total number of reports (reportCount) instead of the number of trips.
-- Improved Admin Report Dashboard layout for better readability and usability.
-- Updated table summary text to reflect the filtered trip list.
-- Trip ID search
-- Status filter
+- Implemented Admin Report Management UI to allow administrators to review and manage individual reports.
+- Added Trip-based report listing in the Admin Dashboard to group reports under the same trip.
 
-### Fixed
-- Fixed status filtering logic for trips with reports in selected status.
+---
+
+## [3.0.0] - 2026-03-16 - Kanyapat_5037
+
+### Added 
+
+- Implemented Admin UI to display all users in a trip, including driver and passengers involved in the report.
+- Added Admin Case Detail Page to display detailed report information, evidence files, and report history.
+
+### Changed
+- Updated Admin Dashboard to list reports as separate entries for each reported user, even when multiple users are reported in the same submission.
+- Improved Admin Case Detail Page to group reports under the same trip and show who submitted each report.
 
 ---
 
