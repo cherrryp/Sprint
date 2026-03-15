@@ -1,3 +1,5 @@
+// myTrip/index.vue
+
 <template>
     <div>
         <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -154,6 +156,16 @@
                                                                 class="text-blue-600 hover:underline" @click.stop>
                                                                 {{ p.email }}
                                                             </a>
+                                                            <span class="mx-2 text-gray-300">|</span>
+                                                            <template v-if="!hasReportedPassenger(route.id, p)">
+                                                                <button @click.stop="openReportModal(route.id, p.id, p.passengerId, p.name)"
+                                                                    class="text-xs text-yellow-600 hover:text-yellow-700 hover:underline">
+                                                                    <i class="fa-solid fa-triangle-exclamation"></i> รายงานปัญหา
+                                                                </button>
+                                                            </template>
+                                                            <span v-else class="text-xs text-gray-500" title="อยู่ระหว่างการตรวจสอบ">
+                                                                <i class="fa-solid fa-clock"></i> รายงานไปแล้ว
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -262,17 +274,6 @@
                                             </button>
                                         </div>
 
-                                        <div class="flex items-center mt-1">
-                                            <div class="flex text-sm text-yellow-400">
-                                                <span>
-                                                    {{ '★'.repeat(Math.round(trip.passenger.rating)) }}{{ '☆'.repeat(5 -
-                                                        Math.round(trip.passenger.rating)) }}
-                                                </span>
-                                            </div>
-                                            <span class="ml-2 text-sm text-gray-600">
-                                                {{ trip.passenger.rating }} ({{ trip.passenger.reviews }} รีวิว)
-                                            </span>
-                                        </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-lg font-bold text-blue-600">{{ trip.price }} บาท</div>
@@ -346,6 +347,17 @@
                                             class="px-4 py-2 text-sm text-red-600 transition duration-200 border border-red-300 rounded-md hover:bg-red-50">
                                             ปฏิเสธ
                                         </button>
+                                        
+                                        <template v-if="!hasReportedPassenger(trip.routeId, trip.passenger)">
+                                            <button @click.stop="openReportModal(trip.routeId, trip.id, trip.passenger.id, trip.passenger.name)"
+                                                class="px-3 py-1 text-sm text-yellow-700 transition duration-200 border border-yellow-300 rounded-md hover:bg-yellow-50">
+                                                รายงานผู้โดยสาร
+                                            </button>
+                                        </template>
+                                        <button v-else disabled
+                                            class="px-3 py-1 text-sm text-gray-500 transition duration-200 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
+                                            รายงานไปแล้ว
+                                        </button>
                                     </template>
 
                                     <button v-else-if="trip.status === 'confirmed'"
@@ -382,6 +394,54 @@
         <ConfirmModal :show="isModalVisible" :title="modalContent.title" :message="modalContent.message"
             :confirmText="modalContent.confirmText" :variant="modalContent.variant" @confirm="handleConfirmAction"
             @cancel="closeConfirmModal" />
+            <div v-if="isReportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="closeReportModal">
+            <div class="w-full max-w-xl p-6 bg-white rounded-lg shadow-xl">
+                <h3 class="text-lg font-semibold text-gray-900">รายงานพฤติกรรมผู้โดยสาร</h3>
+                <p class="mt-1 text-sm text-gray-600">กำลังรายงาน: <span class="font-bold text-red-600">{{ selectedPassengerToReport?.name }}</span></p>
+
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <label class="block mb-1 text-sm text-gray-700">ประเภทปัญหา <span class="text-red-500">*</span></label>
+                        <select v-model="reportForm.category" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option disabled value="">-- เลือกประเภทปัญหา --</option>
+                            <option value="NO_SHOW">ผู้โดยสารไม่มาตามนัด</option>
+                            <option value="FRAUD_OR_SCAM">ไม่จ่ายค่าโดยสาร / โกง</option>
+                            <option value="AGGRESSIVE_BEHAVIOR">พฤติกรรมก้าวร้าว / ไม่เหมาะสม</option>
+                            <option value="OTHER">ทำรถยนต์เสียหาย / สกปรก (อื่นๆ)</option>
+                            <option value="OTHER">อื่น ๆ</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm text-gray-700">รายละเอียด <span class="text-red-500">*</span></label>
+                        <textarea v-model="reportForm.description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="โปรดระบุรายละเอียดสิ่งที่เกิดขึ้น..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm text-gray-700">แนบหลักฐาน (รูปภาพและวิดีโอ แต่ละชนิดไม่เกิน 3 ไฟล์)
+</label>
+                        <input type="file" multiple accept="image/*,video/*" @change="handleEvidenceUpload" class="w-full text-sm" />
+                        <p class="mt-1 text-xs text-gray-500">
+                            รองรับ: รูปภาพและวิดีโอ (แต่ละชนิดไม่เกิน 3 ไฟล์, ขนาดไม่เกิน 10MB/ไฟล์)
+                        </p>
+                        <div v-if="reportForm.evidences.length > 0" class="grid grid-cols-3 gap-2 mt-3">
+                            <div v-for="(evidence, index) in reportForm.evidences" :key="index" class="relative">
+                                <img v-if="evidence.type === 'IMAGE'" :src="evidence.previewUrl" class="object-cover w-full border border-gray-300 rounded-lg aspect-video" />
+                                <video v-else-if="evidence.type === 'VIDEO'" :src="evidence.previewUrl" class="object-cover w-full border border-gray-300 rounded-lg aspect-video"></video>
+                                <button @click="removeEvidence(index)" class="absolute top-1 right-1 px-2 py-1 text-xs text-white bg-red-500 rounded-full hover:bg-red-600">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-6">
+                    <button @click="closeReportModal" class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">ยกเลิก</button>
+                    <button @click="submitReport" :disabled="isSubmittingReport" class="px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50">
+                        {{ isSubmittingReport ? 'กำลังส่งข้อมูล...' : 'ยืนยันการรายงาน' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -406,6 +466,163 @@ const isLoading = ref(false)
 const mapContainer = ref(null)
 const allTrips = ref([])
 const myRoutes = ref([])
+
+// --- Report Management State ---
+const isReportModalOpen = ref(false)
+const isSubmittingReport = ref(false)
+const selectedPassengerToReport = ref(null)
+
+const reportedCasesSet = ref(new Set())
+
+const reportForm = ref({
+    bookingId: null,
+    routeId: null,
+    reportedUserIds: [],
+    category: '',
+    description: '',
+    evidences: [],
+})
+
+async function fetchMyReportedCases() {
+    try {
+        const res = await $api('/reports/my');
+        const reports = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        
+        reports.forEach(r => {
+            if (["PENDING", "FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED"].includes(r.status)) {
+                // จำรูปแบบ ทริปID_ผู้โดยสารID
+                reportedCasesSet.value.add(`${r.routeId}_${r.reportedUserId}`);
+            }
+        });
+    } catch (error) {
+        console.error('Failed to fetch reported cases:', error);
+    }
+}
+
+function openReportModal(routeId, bookingId, passengerId, passengerName) {
+    selectedPassengerToReport.value = { id: passengerId, name: passengerName }
+    reportForm.value = {
+        bookingId: bookingId || null,
+        routeId: routeId || null,
+        reportedUserIds: [passengerId],
+        category: '',
+        description: '',
+        evidences: [],
+    }
+    isReportModalOpen.value = true
+}
+
+function closeReportModal() {
+    isReportModalOpen.value = false
+    selectedPassengerToReport.value = null
+}
+
+function handleEvidenceUpload(event) {
+    const files = Array.from(event.target.files)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
+    for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error(`ไฟล์ ${file.name} มีขนาดใหญ่เกิน 10MB`)
+            event.target.value = ''
+            return
+        }
+    }
+
+    const newEvidences = files.map((file) => {
+        const type = file.type.startsWith("image") ? "IMAGE" : file.type.startsWith("video") ? "VIDEO" : "FILE"
+        return {
+            type,
+            file,
+            previewUrl: URL.createObjectURL(file),
+            fileName: file.name,
+            mimeType: file.type,
+            fileSize: file.size,
+        }
+    })
+
+    const allEvidences = [...reportForm.value.evidences, ...newEvidences]
+    if (allEvidences.filter(e => e.type === 'IMAGE').length > 3) return toast.error('รูปภาพไม่เกิน 3 ไฟล์')
+    if (allEvidences.filter(e => e.type === 'VIDEO').length > 3) return toast.error('วิดีโอไม่เกิน 3 ไฟล์')
+
+    reportForm.value.evidences = allEvidences
+    event.target.value = ''
+}
+
+function removeEvidence(index) {
+    reportForm.value.evidences.splice(index, 1)
+}
+
+async function uploadToCloudinary(file) {
+    const config = useRuntimeConfig()
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', config.public.cloudinaryUploadPreset)
+
+    const resourceType = file.type.startsWith('video') ? 'video' : 'image'
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${config.public.cloudinaryCloudName}/${resourceType}/upload`, {
+        method: 'POST', body: formData
+    })
+    if (!response.ok) throw new Error('Upload failed')
+    return response.json()
+}
+
+async function submitReport() {
+    if (isSubmittingReport.value) return;
+    if (!reportForm.value.category) return toast.error("กรุณาเลือกประเภทปัญหา");
+    if (!reportForm.value.description || reportForm.value.description.trim().length < 10) {
+        return toast.error("กรุณาระบุรายละเอียดปัญหาอย่างน้อย 10 ตัวอักษร");
+    }
+
+    isSubmittingReport.value = true
+    try {
+        const evidences = []
+        if (reportForm.value.evidences.length > 0) {
+            toast.info('กำลังอัปโหลดไฟล์หลักฐาน...')
+            for (const evidence of reportForm.value.evidences) {
+                const cloudData = await uploadToCloudinary(evidence.file)
+                evidences.push({
+                    type: evidence.type,
+                    url: cloudData.secure_url,
+                    fileName: evidence.fileName,
+                    mimeType: evidence.mimeType,
+                    fileSize: evidence.fileSize,
+                })
+            }
+        }
+
+        const reportPayload = {
+            bookingId: reportForm.value.bookingId,
+            routeId: reportForm.value.routeId,
+            reportedUserIds: reportForm.value.reportedUserIds,
+            category: reportForm.value.category,
+            description: reportForm.value.description.trim(),
+        }
+
+        const response = await $api("/reports", { method: "POST", body: reportPayload })
+        
+        const reportData = Array.isArray(response) ? response[0] : response;
+        const reportId = reportData?.groupId || reportData?.id;
+
+        if (evidences.length > 0 && reportId) {
+            await $api(`/reports/${reportId}/evidence`, {
+                method: "POST", body: { evidences }
+            })
+        }
+
+        reportForm.value.reportedUserIds.forEach(id => {
+            reportedCasesSet.value.add(`${reportForm.value.routeId}_${id}`);
+        });
+
+        toast.success("ส่งรายงานผู้โดยสารสำเร็จ")
+        closeReportModal()
+        await fetchMyRoutes()
+    } catch (error) {
+        toast.error(error?.data?.message || "ไม่สามารถส่งรายงานได้")
+    } finally {
+        isSubmittingReport.value = false
+    }
+}
 
 // ---------- Google Maps states ----------
 let gmap = null
@@ -524,6 +741,7 @@ async function fetchMyRoutes() {
             for (const b of (r.bookings || [])) {
                 formatted.push({
                     id: b.id,
+                    routeId: r.id,
                     status: (b.status || '').toLowerCase(),
                     origin: start?.name || `(${Number(start.lat).toFixed(2)}, ${Number(start.lng).toFixed(2)})`,
                     destination: end?.name || `(${Number(end.lat).toFixed(2)}, ${Number(end.lng).toFixed(2)})`,
@@ -535,12 +753,13 @@ async function fetchMyRoutes() {
                     price: (r.pricePerSeat || 0) * (b.numberOfSeats || 0),
                     seats: b.numberOfSeats || 0,
                     passenger: {
+                        id: b.passenger?.id,
+                        passengerId: b.passenger?.id,
                         name: `${b.passenger?.firstName || ''} ${b.passenger?.lastName || ''}`.trim() || 'ผู้โดยสาร',
                         image: b.passenger?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(b.passenger?.firstName || 'P')}&background=random&size=64`,
                         email: b.passenger?.email || '',
                         isVerified: !!b.passenger?.isVerified,
-                        rating: 4.5,
-                        reviews: Math.floor(Math.random() * 50) + 5,
+                        reportCases: b.reportCases || [],
                     },
                     coords,
                     polyline: r.routePolyline || null,
@@ -583,14 +802,14 @@ async function fetchMyRoutes() {
                 conditions: r.conditions || '',
                 passengers: confirmedBookings.map(b => ({
                     id: b.id,
+                    passengerId: b.passenger?.id,
                     seats: b.numberOfSeats || 0,
                     status: 'confirmed',
                     name: `${b.passenger?.firstName || ''} ${b.passenger?.lastName || ''}`.trim() || 'ผู้โดยสาร',
                     image: b.passenger?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(b.passenger?.firstName || 'P')}&background=random&size=64`,
                     email: b.passenger?.email || '',
                     isVerified: !!b.passenger?.isVerified,
-                    rating: 4.5,
-                    reviews: Math.floor(Math.random() * 50) + 5,
+                    reportCases: b.reportCases || [],
                 })),
                 durationText: (typeof r.duration === 'string' ? formatDuration(r.duration) : r.duration) || (r.durationSeconds ? `${Math.round(r.durationSeconds / 60)} นาที` : '-'),
                 distanceText: (typeof r.distance === 'string' ? formatDistance(r.distance) : r.distance) || (r.distanceMeters ? `${(r.distanceMeters / 1000).toFixed(1)} กม.` : '-'),
@@ -632,6 +851,12 @@ const getTripCount = (status) => {
     if (status === 'all') return allTrips.value.length
     if (status === 'myRoutes') return myRoutes.value.length
     return allTrips.value.filter(trip => trip.status === status).length
+}
+
+function hasReportedPassenger(routeId, passenger) {
+    if (!passenger || !routeId) return false;
+    const targetId = passenger.passengerId || passenger.id;
+    return reportedCasesSet.value.has(`${routeId}_${targetId}`);
 }
 
 const toggleTripDetails = (id) => {
@@ -877,6 +1102,7 @@ useHead({
 onMounted(() => {
     if (window.google?.maps) {
         initializeMap()
+        fetchMyReportedCases()
         fetchMyRoutes().then(() => {
             if (activeTab.value === 'myRoutes') {
                 if (myRoutes.value.length) updateMap(myRoutes.value[0])
@@ -890,6 +1116,7 @@ onMounted(() => {
     window[GMAPS_CB] = () => {
         try { delete window[GMAPS_CB] } catch { }
         initializeMap()
+        fetchMyReportedCases()
         fetchMyRoutes().then(() => {
             if (activeTab.value === 'myRoutes') {
                 if (myRoutes.value.length) updateMap(myRoutes.value[0])
