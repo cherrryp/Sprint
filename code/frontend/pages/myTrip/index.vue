@@ -67,6 +67,13 @@
                         class="status-badge status-confirmed"
                         >ยืนยันแล้ว</span
                       >
+
+                      <span
+                        v-else-if="trip.status === 'completed'"
+                        class="status-badge status-confirmed"
+                      >
+                        เสร็จสิ้น
+                      </span>
                       <span
                         v-else-if="trip.status === 'rejected'"
                         class="status-badge status-rejected"
@@ -280,6 +287,24 @@
                     </button>
                   </template>
 
+                  <!-- COMPLETED -->
+                  <template v-else-if="trip.status === 'completed'">
+                    <button
+                      v-if="!reviewedBookings?.[trip.id]"
+                      @click.stop="openReviewModal(trip)"
+                      class="px-4 py-2 text-sm text-white bg-yellow-500 rounded-md hover:bg-yellow-600"
+                    >
+                      รีวิวคนขับ
+                    </button>
+
+                    <span
+                      v-else
+                      class="px-4 py-2 text-sm text-green-600 border border-green-300 rounded-md"
+                    >
+                      รีวิวแล้ว
+                    </span>
+                  </template>
+
                   <!-- REJECTED / CANCELLED: ลบได้ -->
                   <template v-else-if="trip.status === 'rejected'">
                     <button
@@ -321,6 +346,60 @@
             </div>
             <div ref="mapContainer" id="map" class="h-96"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEW MODAL -->
+    <div
+      v-if="showReviewModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+    >
+      <div class="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+        <h2 class="mb-4 text-xl font-bold text-gray-900">รีวิวคนขับ</h2>
+
+        <!-- Rating -->
+        <div class="mb-4">
+          <p class="mb-2 text-sm text-gray-600">ให้คะแนนการเดินทาง</p>
+
+          <div class="flex text-3xl">
+            <span
+              v-for="i in 5"
+              :key="i"
+              @click="rating = i"
+              class="cursor-pointer"
+              :class="i <= rating ? 'text-yellow-400' : 'text-gray-300'"
+            >
+              ★
+            </span>
+          </div>
+        </div>
+
+        <!-- Comment -->
+        <div class="mb-4">
+          <textarea
+            v-model="comment"
+            rows="3"
+            class="w-full p-2 border border-gray-300 rounded-md"
+            placeholder="เขียนความคิดเห็น..."
+          />
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-end gap-2">
+          <button
+            @click="showReviewModal = false"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md"
+          >
+            ยกเลิก
+          </button>
+
+          <button
+            @click="submitReview"
+            class="px-4 py-2 text-white bg-yellow-500 rounded-md hover:bg-yellow-600"
+          >
+            ส่งรีวิว
+          </button>
         </div>
       </div>
     </div>
@@ -499,7 +578,8 @@
               class="w-full text-sm"
             />
             <p class="mt-1 text-xs text-gray-500">
-              รองรับ: รูปภาพและวิดีโอ (แต่ละชนิดไม่เกิน 3 ไฟล์, ขนาดไม่เกิน 10MB/ไฟล์)
+              รองรับ: รูปภาพและวิดีโอ (แต่ละชนิดไม่เกิน 3 ไฟล์, ขนาดไม่เกิน
+              10MB/ไฟล์)
             </p>
 
             <!-- Preview ไฟล์ที่เลือก -->
@@ -580,16 +660,66 @@ import { useRouter, useRoute } from "vue-router";
 const router = useRouter();
 const route = useRoute();
 
-const tokenCookie = useCookie('token');
-const userCookie = useCookie('user');
+const tokenCookie = useCookie("token");
+const userCookie = useCookie("user");
+
+// State สำหรับการรีวิว
+const showReviewModal = ref(false);
+const reviewTrip = ref(null)
+
+const rating = ref(5);
+const comment = ref("");
+const reviewedBookings = ref({})
+
+//เปิดรีวิว
+function openReviewModal(trip) {
+  reviewTrip.value = trip
+  rating.value = 5;
+  comment.value = "";
+  showReviewModal.value = true;
+}
+//เช็ครีวิว
+async function checkReviewStatus(bookingId) {
+  try {
+    const res = await $api(`/reviews/booking/${bookingId}`);
+    reviewedBookings.value[bookingId] = !!res.data;
+  } catch (err) {
+    reviewedBookings.value[bookingId] = false;
+  }
+}
+
+// ส่งรีวิว
+async function submitReview() {
+  try {
+    await $api("/reviews", {
+      method: "POST",
+      body: {
+        bookingId: reviewTrip.value.id,
+        rating: rating.value,
+        comment: comment.value,
+      },
+    });
+
+    alert("รีวิวสำเร็จ");
+
+    reviewedBookings.value[reviewTrip.value.id] = true;
+
+    showReviewModal.value = false;
+
+    await fetchMyTrips(); 
+  } catch (err) {
+    alert(err?.data?.message || "ไม่สามารถรีวิวได้");
+  }
+}
 
 // ใช้ computed เพื่อให้ดึงค่าได้อย่างถูกต้องและปลอดภัยใน Nuxt
 const myUserId = computed(() => {
   if (userCookie.value) {
     try {
-      const userData = typeof userCookie.value === 'string'
-        ? JSON.parse(decodeURIComponent(userCookie.value))
-        : userCookie.value;
+      const userData =
+        typeof userCookie.value === "string"
+          ? JSON.parse(decodeURIComponent(userCookie.value))
+          : userCookie.value;
 
       if (userData?.id) return String(userData.id);
     } catch (err) {
@@ -606,8 +736,8 @@ const myUserId = computed(() => {
     }
   }
 
-  if (typeof window !== 'undefined') {
-    const localToken = localStorage.getItem('token');
+  if (typeof window !== "undefined") {
+    const localToken = localStorage.getItem("token");
     if (localToken) {
       try {
         const payload = JSON.parse(atob(localToken.split(".")[1]));
@@ -683,9 +813,9 @@ const blockedReportedUserIds = computed(() => {
 // เช็คว่า trip นี้มีการรายงานที่ยังไม่ได้ปิดหรือยัง
 const hasActiveReport = (trip) => {
   if (!trip?.reportCases || trip.reportCases.length === 0) return false;
-  
+
   return trip.reportCases.some((r) =>
-    ["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED"].includes(r.status)
+    ["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED"].includes(r.status),
   );
 };
 
@@ -730,24 +860,24 @@ function closeReportModal() {
 async function uploadToCloudinary(file) {
   const config = useRuntimeConfig();
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', config.public.cloudinaryUploadPreset);
+  formData.append("file", file);
+  formData.append("upload_preset", config.public.cloudinaryUploadPreset);
 
   // ใช้ endpoint ที่เหมาะสมตามประเภทไฟล์
-  const resourceType = file.type.startsWith('video') ? 'video' : 'image';
-  
+  const resourceType = file.type.startsWith("video") ? "video" : "image";
+
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${config.public.cloudinaryCloudName}/${resourceType}/upload`,
     {
-      method: 'POST',
+      method: "POST",
       body: formData,
-    }
+    },
   );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    console.error('Cloudinary error:', errorData);
-    throw new Error(errorData.error?.message || 'อัปโหลดไฟล์ไม่สำเร็จ');
+    console.error("Cloudinary error:", errorData);
+    throw new Error(errorData.error?.message || "อัปโหลดไฟล์ไม่สำเร็จ");
   }
 
   return response.json();
@@ -797,8 +927,8 @@ async function submitReport() {
     const evidences = [];
     if (reportForm.value.evidences.length > 0) {
       // console.log('[submitReport] เริ่มอัปโหลดไฟล์', reportForm.value.evidences.length, 'ไฟล์');
-      toast.info('กำลังอัปโหลดไฟล์...');
-      
+      toast.info("กำลังอัปโหลดไฟล์...");
+
       for (const evidence of reportForm.value.evidences) {
         try {
           // console.log('[submitReport] อัปโหลด:', evidence.fileName);
@@ -812,7 +942,7 @@ async function submitReport() {
             fileSize: evidence.fileSize,
           });
         } catch (err) {
-          console.error('[submitReport] Error uploading file:', err);
+          console.error("[submitReport] Error uploading file:", err);
           toast.error(`ไม่สามารถอัปโหลดไฟล์ ${evidence.fileName}`);
           throw err;
         }
@@ -836,11 +966,11 @@ async function submitReport() {
     });
 
     // console.log('[submitReport] Response จากการสร้าง report:', response);
-    
+
     // รองรับทั้งกรณี response เป็น Array หรือ Object
     const reportData = Array.isArray(response) ? response[0] : response;
     // console.log('[submitReport] reportData:', reportData);
-    
+
     // ถ้ามี groupId ใช้ groupId, ไม่มีใช้ id
     const reportId = reportData?.groupId || reportData?.id;
     // console.log('[submitReport] reportId (groupId || id):', reportId);
@@ -850,19 +980,19 @@ async function submitReport() {
       // console.log('[submitReport] เริ่มส่งหลักฐาน');
       try {
         // console.log('[submitReport] reportId ที่จะใช้:', reportId);
-        
+
         const evidencePayload = { evidences };
         // console.log('[submitReport] evidence payload:', evidencePayload);
         // console.log('[submitReport] endpoint:', `/reports/${reportId}/evidence`);
-        
+
         const evidenceResponse = await $api(`/reports/${reportId}/evidence`, {
           method: "POST",
           body: evidencePayload,
         });
         // console.log('[submitReport] Response จากการส่งหลักฐาน:', evidenceResponse);
       } catch (err) {
-        console.error('[submitReport]  Error uploading evidences:', err);
-        console.error('[submitReport] Error details:', err.data || err.message);
+        console.error("[submitReport]  Error uploading evidences:", err);
+        console.error("[submitReport] Error details:", err.data || err.message);
         // ไม่ throw error เพราะรายงานส่งไปแล้ว
       }
     } else if (evidences.length > 0 && !reportId) {
@@ -872,9 +1002,9 @@ async function submitReport() {
     // console.log('[submitReport] สำเร็จ! กำลังปิด modal และ refresh');
     toast.success(
       "ส่งรายงานสำเร็จ\n\nหากต้องการเพิ่มหลักฐานเพิ่มเติม\nสามารถไปที่หน้าประวัติการรายงานได้",
-      { duration: 5000 }
+      { duration: 5000 },
     );
-    
+
     closeReportModal();
 
     // รีเฟรชข้อมูลเพื่ออัพเดทสถานะว่ารายงานแล้ว
@@ -886,10 +1016,11 @@ async function submitReport() {
       router.push("/myHistory");
     }, 1500);
   } catch (error) {
-    console.error('[submitReport] Error:', error);
-    console.error('[submitReport] Error data:', error?.data);
-    console.error('[submitReport] Error message:', error?.message);
-    const errorMessage = error?.data?.message || error?.message || "ไม่สามารถส่งรายงานได้";
+    console.error("[submitReport] Error:", error);
+    console.error("[submitReport] Error data:", error?.data);
+    console.error("[submitReport] Error message:", error?.message);
+    const errorMessage =
+      error?.data?.message || error?.message || "ไม่สามารถส่งรายงานได้";
     toast.error(errorMessage);
   } finally {
     isSubmittingReport.value = false;
@@ -905,7 +1036,7 @@ function handleEvidenceUpload(event) {
   for (const file of files) {
     if (file.size > MAX_FILE_SIZE) {
       toast.error(`ไฟล์ ${file.name} มีขนาดใหญ่เกิน 10MB`);
-      event.target.value = ''; // รีเซ็ต input
+      event.target.value = ""; // รีเซ็ต input
       return;
     }
   }
@@ -929,23 +1060,23 @@ function handleEvidenceUpload(event) {
 
   // ตรวจสอบจำนวนแต่ละประเภท
   const allEvidences = [...reportForm.value.evidences, ...newEvidences];
-  const imageCount = allEvidences.filter(e => e.type === 'IMAGE').length;
-  const videoCount = allEvidences.filter(e => e.type === 'VIDEO').length;
+  const imageCount = allEvidences.filter((e) => e.type === "IMAGE").length;
+  const videoCount = allEvidences.filter((e) => e.type === "VIDEO").length;
 
   if (imageCount > 3) {
-    toast.error('รูปภาพไม่เกิน 3 ไฟล์');
-    event.target.value = '';
+    toast.error("รูปภาพไม่เกิน 3 ไฟล์");
+    event.target.value = "";
     return;
   }
 
   if (videoCount > 3) {
-    toast.error('วิดีโอไม่เกิน 3 ไฟล์');
-    event.target.value = '';
+    toast.error("วิดีโอไม่เกิน 3 ไฟล์");
+    event.target.value = "";
     return;
   }
 
   reportForm.value.evidences = allEvidences;
-  event.target.value = ''; // รีเซ็ตเพื่อให้เลือกไฟล์เดิมได้อีก
+  event.target.value = ""; // รีเซ็ตเพื่อให้เลือกไฟล์เดิมได้อีก
 }
 
 function removeEvidence(index) {
@@ -983,6 +1114,7 @@ const GMAPS_CB = "__gmapsReady__";
 const tabs = [
   { status: "pending", label: "รอดำเนินการ" },
   { status: "confirmed", label: "ยืนยันแล้ว" },
+  { status: "completed", label: "เสร็จสิ้น" },
   { status: "rejected", label: "ปฏิเสธ" },
   { status: "cancelled", label: "ยกเลิก" },
   { status: "all", label: "ทั้งหมด" },
@@ -1168,6 +1300,10 @@ async function fetchMyTrips() {
     });
 
     allTrips.value = formatted;
+
+    for (const trip of formatted) {
+      await checkReviewStatus(trip.id);
+    }
 
     // รอให้แผนที่พร้อมก่อน แล้วค่อย reverse geocode เพื่อได้ "ชื่อสถานที่" สวยๆ
     await waitMapReady();
@@ -1554,11 +1690,13 @@ onMounted(() => {
   }
 
   const token = localStorage.getItem("token") || tokenCookie.value;
-  
+
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      myUserId.value = String(payload.sub || payload.id || payload.userId || '');
+      myUserId.value = String(
+        payload.sub || payload.id || payload.userId || "",
+      );
     } catch (error) {
       console.error("Error parsing token:", error);
     }
@@ -1567,9 +1705,10 @@ onMounted(() => {
   if (!myUserId.value && userCookie.value) {
     try {
       // Nuxt มักจะแปลง JSON ใน Cookie ให้เป็น Object อัตโนมัติ แต่กันเหนียวไว้ก่อน
-      const userData = typeof userCookie.value === 'string' 
-        ? JSON.parse(decodeURIComponent(userCookie.value)) 
-        : userCookie.value;
+      const userData =
+        typeof userCookie.value === "string"
+          ? JSON.parse(decodeURIComponent(userCookie.value))
+          : userCookie.value;
 
       if (userData?.id) {
         myUserId.value = String(userData.id);
@@ -1597,7 +1736,7 @@ onMounted(() => {
 onActivated(() => {
   fetchMyTrips().then(() => {
     if (filteredTrips.value.length && selectedTripId.value) {
-      const trip = allTrips.value.find(t => t.id === selectedTripId.value);
+      const trip = allTrips.value.find((t) => t.id === selectedTripId.value);
       if (trip) updateMap(trip);
     } else if (filteredTrips.value.length) {
       updateMap(filteredTrips.value[0]);
@@ -1606,18 +1745,22 @@ onActivated(() => {
 });
 
 // Watch query params เพื่อ refresh เมื่อมี query.refresh (จาก navigate หลังจอง)
-watch(() => route.query.refresh, (newVal) => {
-  if (newVal) {
-    // console.log('[myTrip] Detected refresh query, fetching trips...');
-    // Fetch ข้อมูลใหม่เมื่อมี refresh query
-    fetchMyTrips().then(() => {
-      // console.log('[myTrip] Fetched trips:', allTrips.value.length, 'trips');
-      if (filteredTrips.value.length) {
-        updateMap(filteredTrips.value[0]);
-      }
-    });
-  }
-}, { immediate: true });
+watch(
+  () => route.query.refresh,
+  (newVal) => {
+    if (newVal) {
+      // console.log('[myTrip] Detected refresh query, fetching trips...');
+      // Fetch ข้อมูลใหม่เมื่อมี refresh query
+      fetchMyTrips().then(() => {
+        // console.log('[myTrip] Fetched trips:', allTrips.value.length, 'trips');
+        if (filteredTrips.value.length) {
+          updateMap(filteredTrips.value[0]);
+        }
+      });
+    }
+  },
+  { immediate: true },
+);
 
 function initializeMap() {
   if (!mapContainer.value || gmap) return;
