@@ -817,11 +817,17 @@ async function fetchDriverReviews(driverId) {
   try {
     const res = await $api(`/reviews/driver/${driverId}`);
 
-    driverReviews.value[driverId] = res.data || [];
+    driverReviews.value = {
+      ...driverReviews.value,
+      [driverId]: res.data || [],
+    };
 
   } catch (err) {
     console.error("โหลดรีวิวคนขับไม่สำเร็จ", err);
-    driverReviews.value[driverId] = [];
+    driverReviews.value = {
+      ...driverReviews.value,
+      [driverId]: [],
+    };
   }
 }
 
@@ -877,8 +883,12 @@ async function submitReview() {
     toast.success("รีวิวสำเร็จ");
 
     // เปลี่ยนปุ่มเป็น "รีวิวแล้ว"
-    reviewedBookings.value[reviewTrip.value.b] = true;
-    await fetchDriverReviews(reviewTrip.value.driverId);
+    reviewedBookings.value[reviewTrip.value.id] = true;
+
+    // บันทึก driverId ก่อนที่ reviewTrip จะถูก reset
+    const reviewedDriverId = reviewTrip.value.driverId;
+
+    await fetchDriverReviews(reviewedDriverId);
 
     showReviewModal.value = false;
 
@@ -889,8 +899,8 @@ async function submitReview() {
 
     // โหลด trips ใหม่
     await fetchMyTrips();
-    // โหลดรีวิวของคนขับใหม่
-    await fetchDriverReviews(reviewTrip.value.driverId);
+    // โหลดรีวิวของคนขับใหม่ (ใช้ driverId ที่บันทึกไว้)
+    await fetchDriverReviews(reviewedDriverId);
 
     // ตรวจสอบว่า booking ไหนรีวิวแล้ว
     for (const trip of allTrips.value) {
