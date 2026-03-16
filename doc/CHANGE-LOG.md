@@ -641,6 +641,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.0] - 2026-03-17 - Kanyapat_5037
+
+### Changed
+- Improve Report Detail UI layout
+- Add status badge with color indicator
+- Translate report status and table labels to Thai
+
+---
+
 ## Version Guidelines
 
 ### Categories
