@@ -334,6 +334,15 @@
                   <button v-else-if="['rejected', 'cancelled'].includes(trip.status)" @click.stop="openConfirmModal(trip, 'delete')" class="px-4 py-2 text-sm text-gray-600 transition duration-200 border border-gray-300 rounded-md hover:bg-gray-50">
                     ลบรายการ
                   </button>
+
+                  <template v-else-if="trip.status === 'completed'">
+                    <template v-if="!hasReportedPassenger(trip.routeId, trip.passenger)">
+                      <button @click.stop="openReportModal(trip.routeId, trip.id, trip.passenger.id, trip.passenger.name)" class="px-3 py-1 text-sm text-yellow-700 transition duration-200 border border-yellow-300 rounded-md hover:bg-yellow-50">รายงานผู้โดยสาร</button>
+                    </template>
+                    <button v-else disabled class="px-3 py-1 text-sm text-gray-500 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">รายงานไปแล้ว</button>
+                  </template>
+
+                  <button v-else-if="['rejected', 'cancelled'].includes(trip.status)" @click.stop="openConfirmModal(trip, 'delete')" class="px-4 py-2 text-sm text-gray-600 transition duration-200 border border-gray-300 rounded-md hover:bg-gray-50">ลบรายการ</button>
                 </div>
               </div>
             </div>
