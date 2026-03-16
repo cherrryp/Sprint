@@ -834,15 +834,16 @@ async function fetchDriverReviews(driverId) {
 // เช็คว่ารีวิวแล้วหรือยัง
 async function checkReviewStatus(bookingId) {
   try {
-    const res = await $api(`/reviews/booking/${bookingId}`);
-
-    if (res.data) {
-      reviewedBookings.value[bookingId] = true;
-    } else {
-      reviewedBookings.value[bookingId] = false;
+    const res = await $api(`/reviews/booking/${bookingId}`)
+    reviewedBookings.value = {
+      ...reviewedBookings.value,
+      [bookingId]: !!(res?.id || (Array.isArray(res) && res.length > 0)),
     }
   } catch (err) {
-    console.error("ตรวจสอบ review ไม่สำเร็จ", err);
+    reviewedBookings.value = {
+      ...reviewedBookings.value,
+      [bookingId]: false,
+    }
   }
 }
 
@@ -1535,7 +1536,7 @@ async function fetchMyTrips() {
     allTrips.value = formatted;
 
     for (const trip of formatted) {
-      await checkReviewStatus(trip.bookingId);
+      await checkReviewStatus(trip.id);
     }
 
     // รอให้แผนที่พร้อมก่อน แล้วค่อย reverse geocode เพื่อได้ "ชื่อสถานที่" สวยๆ
