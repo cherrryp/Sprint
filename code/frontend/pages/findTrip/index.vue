@@ -472,7 +472,6 @@
                       </div>
                     </div>
                   </div>
-
                   <div class="flex justify-end mt-4">
                     <button
                       @click.stop="openModal(route)"
