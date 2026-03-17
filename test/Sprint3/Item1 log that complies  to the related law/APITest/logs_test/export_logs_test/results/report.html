@@ -5,7 +5,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="-1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta content="Robot Framework 7.3.2 (Python 3.13.5 on win32)" name="Generator">
+<meta content="Robot Framework 7.4.1 (Python 3.11.7 on win32)" name="Generator">
 <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKcAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAAqAAAAAAAAAAAAAAAAAAAALIAAAD/AAAA4AAAANwAAADcAAAA3AAAANwAAADcAAAA3AAAANwAAADcAAAA4AAAAP8AAACxAAAAAAAAAKYAAAD/AAAAuwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC/AAAA/wAAAKkAAAD6AAAAzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAN8AAAD/AAAA+gAAAMMAAAAAAAAAAgAAAGsAAABrAAAAawAAAGsAAABrAAAAawAAAGsAAABrAAAADAAAAAAAAADaAAAA/wAAAPoAAADDAAAAAAAAAIsAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAANEAAAAAAAAA2gAAAP8AAAD6AAAAwwAAAAAAAAAAAAAAMgAAADIAAAAyAAAAMgAAADIAAAAyAAAAMgAAADIAAAAFAAAAAAAAANoAAAD/AAAA+gAAAMMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADaAAAA/wAAAPoAAADDAAAAAAAAADwAAAB8AAAAAAAAAGAAAABcAAAAAAAAAH8AAABKAAAAAAAAAAAAAAAAAAAA2gAAAP8AAAD6AAAAwwAAAAAAAADCAAAA/wAAACkAAADqAAAA4QAAAAAAAAD7AAAA/wAAALAAAAAGAAAAAAAAANoAAAD/AAAA+gAAAMMAAAAAAAAAIwAAAP4AAAD/AAAA/wAAAGAAAAAAAAAAAAAAAMkAAAD/AAAAigAAAAAAAADaAAAA/wAAAPoAAADDAAAAAAAAAAAAAAAIAAAAcAAAABkAAAAAAAAAAAAAAAAAAAAAAAAAEgAAAAAAAAAAAAAA2gAAAP8AAAD7AAAAywAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAN4AAAD/AAAAqwAAAP8AAACvAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALIAAAD/AAAAsgAAAAAAAAC5AAAA/wAAAMoAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMkAAAD/AAAAvAAAAAAAAAAAAAAAAAAAAKwAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAArQAAAAAAAAAAwAMAAIABAAAf+AAAP/wAAD/8AAAgBAAAP/wAAD/8AAA//AAAJIwAADHEAAA//AAAP/wAAB/4AACAAQAAwAMAAA==">
 <style media="all">
 :root {
@@ -116,15 +116,16 @@ select {
 #header {
     width: 65em;
     height: 3em;
-    margin: 20px 0 6px 0;
+    margin: 1em 0 0 0;
 }
 h1 {
     float: left;
-    margin: 0 0 0.5em 0;
+    margin: 0 0 1em 0;
     width: 75%;
 }
 h2 {
     clear: left;
+    margin: 1.5em 0 0.5em 0;
 }
 #generated {
     float: right;
@@ -168,7 +169,13 @@ h2 {
     background-color: var(--primary-color);
     border-radius: 3px;
 }
-.label.debug, .label.trace, .label.error, .label.keyword {
+/* https://stackoverflow.com/questions/75238633 */
+@supports (-moz-appearance: none) {
+    .label {
+        padding-top: 4px;
+    }
+}
+.label.debug, .label.trace, .label.error {
     letter-spacing: 0;
 }
 .label.pass, .label.fail, .label.error, .label.skip, .label.warn {
@@ -354,19 +361,6 @@ th.stats-col-graph:hover {
 [data-theme="dark"] .light-mode-icon,
 [data-theme="light"] .dark-mode-icon {
     display: block;
-}
-@keyframes highlight {
-    0% {
-        background: var(--primary-color)
-    }
-    100% {
-        background: var(--target-color);
-    }
-}
-:target {
-    background: var(--target-color);
-    transition: background 0.3s;
-    animation: highlight 4s;
 }
 </style>
 <style media="all">
@@ -957,7 +951,7 @@ window.model = (function () {
         kw.type = data.type;
         kw.template = 'keywordTemplate';
         kw.arguments = data.args;
-        kw.assign = data.assign + (data.assign ? ' =  ' : '');
+        kw.assign = data.assign;
         kw.tags = data.tags;
         kw.timeout = data.timeout;
         kw.populateKeywords = createIterablePopulator('Keyword');
@@ -1696,7 +1690,7 @@ function addStatistics() {
         '<th class="stats-col-elapsed">Elapsed</th>' +
         '<th class="stats-col-graph">Pass / Fail / Skip</th>';
     var statTable =
-        '<h2>{Test} Statistics</h2>' +
+        '<h2>Statistics</h2>' +
         '<table class="statistics" id="total-stats"><thead><tr>' +
         '<th class="stats-col-name">Total Statistics</th>' + statHeaders +
         '</tr></thead></table>' +
@@ -1706,7 +1700,7 @@ function addStatistics() {
         '<table class="statistics" id="suite-stats"><thead><tr>' +
         '<th class="stats-col-name">Statistics by Suite</th>' + statHeaders +
         '</tr></thead></table>';
-    $(testOrTask(statTable)).appendTo('#statistics-container');
+    $(statTable).appendTo('#statistics-container');
     util.map(['total', 'tag', 'suite'], addStatTable);
     addTooltipsToElapsedTimes();
     enableStatisticsSorter();
@@ -1887,22 +1881,48 @@ storage = function () {
 window.output = {};
 </script>
 <script type="text/javascript">
-window.output["suite"] = [1,2,3,4,[],[1,0,43357],[],[[5,0,6,[],[1,7880,3945],[]],[7,0,8,[],[1,11826,3560],[]],[9,0,10,[],[1,15387,3244],[]],[11,0,12,[],[1,18632,3826],[]],[13,0,14,[],[1,22460,5296],[]],[15,0,16,[],[1,27757,2567],[]],[17,0,18,[],[1,30325,3100],[]],[19,0,20,[],[1,33426,2334],[]],[21,0,22,[],[1,35761,2645],[]],[23,0,24,[],[1,38407,4949],[]]],[],[10,10,0,0]];
+<<<<<<< HEAD
+<<<<<<< HEAD
+window.output["suite"] = [1,2,3,0,[],[1,0,7411],[],[[4,0,0,[],[1,454,2525],[]],[5,0,0,[],[1,2980,3605],[]],[6,0,0,[],[1,6586,823],[]]],[],[3,3,0,0]];
+=======
+window.output["suite"] = [1,2,3,0,[],[1,0,980],[],[[4,0,0,[],[1,355,286],[]],[5,0,0,[],[1,641,176],[]],[6,0,0,[],[1,819,161],[]]],[],[3,3,0,0]];
+>>>>>>> 76c0239 (Refactor code structure for improved readability and maintainability)
+=======
+window.output["suite"] = [1,2,3,0,[],[1,0,7411],[],[[4,0,0,[],[1,454,2525],[]],[5,0,0,[],[1,2980,3605],[]],[6,0,0,[],[1,6586,823],[]]],[],[3,3,0,0]];
+>>>>>>> 9bc2829 (Update export_logs_test report with new statistics and execution times)
 </script>
 <script type="text/javascript">
 window.output["strings"] = [];
 </script>
 <script type="text/javascript">
-window.output["strings"] = window.output["strings"].concat(["*","*Incident Report Api Test","*C:\\Users\\ROG\\Documents\\Dev\\SE\\Sprint\\test\\Sprint3\\Item11 report incidents\\APITest\\incident_report_api_test.robot","*../incident_report_api_test.robot","*<p>API Test Suite for Incident Report System\x3c/p>","*1. User Should Be Able To Create An Incident","*<p>ผู้ใช้สร้างการแจ้งเหตุใหม่ (POST /) โดยไม่ส่ง Location\x3c/p>","*2. User Should Be Able To Get Their Own Incidents","*<p>ผู้ใช้ดึงประวัติการแจ้งเหตุของตัวเอง (GET /my)\x3c/p>","*3. User Should Be Able To Get Incident By ID","*<p>ผู้ใช้ดูรายละเอียดเคสรายตัว (GET /:id)\x3c/p>","*4. User Should Be Able To Add Evidence To Incident","*<p>ผู้ใช้อัปโหลดหลักฐานเพิ่มเติม (POST /:id/evidence)\x3c/p>","*5. Admin Should Be Able To Get All Incidents","*<p>แอดมินดึงรายการการแจ้งเหตุทั้งหมด (GET /admin/all)\x3c/p>","*6. Admin Should Be Able To Assign Incident","*<p>แอดมินรับเรื่องเคส (PATCH /admin/:id/assign)\x3c/p>","*7. Admin Should Be Able To Resolve Incident","*<p>แอดมินปิดเคส (PATCH /admin/:id/resolve)\x3c/p>","*8. Create Another Incident For Cancel And Reject Tests","*<p>สร้างเคสที่ 2 เพื่อเอาไว้เทสต์การ Cancel/Reject\x3c/p>","*9. Admin Should Be Able To Reject Incident","*<p>แอดมินปัดตกเคส (PATCH /admin/:id/reject)\x3c/p>","*10. User Should Be Able To Cancel Their Own Incident","*<p>ผู้ใช้ยกเลิกการแจ้งเหตุของตัวเอง (PATCH /:id/cancel)\x3c/p>"]);
+window.output["strings"] = window.output["strings"].concat(["*","*Export Logs","*C:\\Users\\User\\Documents\\Code\\Web\\Sprint\\test\\API Test\\export_logs_test\\export_logs.robot","*export_logs.robot","*Scenario 1: User Request -&gt; Admin Approve -&gt; User Download","*Scenario 2: Admin Request -&gt; Admin Download","*Scenario 3: Admin Download User Request"]);
 </script>
 <script type="text/javascript">
-window.output["stats"] = [[{"elapsed":"00:00:35","fail":0,"label":"All Tests","pass":10,"skip":0}],[],[{"elapsed":"00:00:43","fail":0,"id":"s1","label":"Incident Report Api Test","name":"Incident Report Api Test","pass":10,"skip":0}]];
+<<<<<<< HEAD
+<<<<<<< HEAD
+window.output["stats"] = [[{"elapsed":"00:00:07","fail":0,"label":"All Tests","pass":3,"skip":0}],[],[{"elapsed":"00:00:07","fail":0,"id":"s1","label":"Export Logs","name":"Export Logs","pass":3,"skip":0}]];
 </script>
 <script type="text/javascript">
-window.output["baseMillis"] = 1773757808734;
+window.output["baseMillis"] = 1772555520796;
 </script>
 <script type="text/javascript">
-window.output["generated"] = 43413;
+window.output["generated"] = 7427;
+=======
+window.output["stats"] = [[{"elapsed":"00:00:01","fail":0,"label":"All Tests","pass":3,"skip":0}],[],[{"elapsed":"00:00:01","fail":0,"id":"s1","label":"Export Logs","name":"Export Logs","pass":3,"skip":0}]];
+=======
+window.output["stats"] = [[{"elapsed":"00:00:07","fail":0,"label":"All Tests","pass":3,"skip":0}],[],[{"elapsed":"00:00:07","fail":0,"id":"s1","label":"Export Logs","name":"Export Logs","pass":3,"skip":0}]];
+>>>>>>> 9bc2829 (Update export_logs_test report with new statistics and execution times)
+</script>
+<script type="text/javascript">
+window.output["baseMillis"] = 1772555520796;
+</script>
+<script type="text/javascript">
+<<<<<<< HEAD
+window.output["generated"] = 993;
+>>>>>>> 76c0239 (Refactor code structure for improved readability and maintainability)
+=======
+window.output["generated"] = 7427;
+>>>>>>> 9bc2829 (Update export_logs_test report with new statistics and execution times)
 </script>
 <script type="text/javascript">
 window.output["expand_keywords"] = null;
@@ -2285,7 +2305,7 @@ function hideHiddenDetailsColumns(elem) {
 </script>
 
 <script type="text/x-jquery-tmpl" id="summaryTableTemplate">
-  <h2>Summary Information</h2>
+  <h2>Summary</h2>
   <table class="details">
     <tr>
       <th>Status:</th>
@@ -2382,7 +2402,7 @@ function hideHiddenDetailsColumns(elem) {
 </script>
 
 <script type="text/x-jquery-tmpl" id="detailsHeaderTemplate">
-  <h2 id="${linkTarget}">{{= testOrTask('{Test} Details')}}</h2>
+  <h2 id="${linkTarget}">Details</h2>
   <ul id="detail-tabs">
     <li class="${totalTabStatus} detail-tab">
       <a href="#totals" onclick="renderTotalSelector()"
