@@ -143,6 +143,45 @@
 
                         </div>
 
+                        <div v-if="incident?.route" class="border-t pt-4">
+
+                        <p class="font-semibold mb-2">รายละเอียดทริป</p>
+
+                        <div class="grid md:grid-cols-2 gap-4 text-sm">
+
+                            <div>
+                            <p class="text-gray-500">Trip ID</p>
+                            <p class="font-medium">
+                                {{ incident.route.id }}
+                            </p>
+                            </div>
+
+                            <div v-if="incident.route.driver">
+                            <p class="text-gray-500">คนขับ</p>
+                            <p class="font-medium">
+                                {{ incident.route.driver.firstName }}
+                                {{ incident.route.driver.lastName }}
+                            </p>
+                            </div>
+
+                            <div v-if="incident.route.origin">
+                            <p class="text-gray-500">ต้นทาง</p>
+                            <p class="font-medium">
+                                {{ incident.route.origin }}
+                            </p>
+                            </div>
+
+                            <div v-if="incident.route.destination">
+                            <p class="text-gray-500">ปลายทาง</p>
+                            <p class="font-medium">
+                                {{ incident.route.destination }}
+                            </p>
+                            </div>
+
+                        </div>
+
+                        </div>
+
                         <div class="border-t"></div>
 
                             <div>
