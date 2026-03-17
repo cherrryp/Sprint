@@ -127,13 +127,22 @@
                         </span>
 
                         <span v-else>
-                          {{ "★".repeat(Math.round(getDriverRating(trip.driverId).avg)) }}{{ "☆".repeat(5 - Math.round(getDriverRating(trip.driverId).avg)) }}
+                          {{
+                            "★".repeat(
+                              Math.round(getDriverRating(trip.driverId).avg),
+                            )
+                          }}{{
+                            "☆".repeat(
+                              5 -
+                                Math.round(getDriverRating(trip.driverId).avg),
+                            )
+                          }}
                         </span>
                       </div>
 
                       <span class="ml-2 text-sm text-gray-600">
                         <span v-if="getDriverRating(trip.driverId).count">
-                           {{ getDriverRating(trip.driverId).avg }} ({{
+                          {{ getDriverRating(trip.driverId).avg }} ({{
                             getDriverRating(trip.driverId).count
                           }}
                           รีวิว)
@@ -204,7 +213,6 @@
                           • {{ detail }}
                         </li>
                       </ul>
-
                     </div>
                   </div>
 
@@ -255,8 +263,14 @@
                           <!-- Reviewer info row -->
                           <div class="flex items-center gap-2 mb-2">
                             <img
-                              v-if="review.reviewer?.profileImage || review.user?.profileImage"
-                              :src="review.reviewer?.profileImage || review.user?.profileImage"
+                              v-if="
+                                review.reviewer?.profileImage ||
+                                review.user?.profileImage
+                              "
+                              :src="
+                                review.reviewer?.profileImage ||
+                                review.user?.profileImage
+                              "
                               alt="รูปโปรไฟล์"
                               class="object-cover w-8 h-8 rounded-full border border-gray-200"
                             />
@@ -265,21 +279,35 @@
                               class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-semibold border border-gray-200"
                             >
                               {{
-                                ((review.reviewer?.firstName || review.user?.firstName || review.reviewer?.name || review.user?.name || '?')[0] || '?').toUpperCase()
+                                (
+                                  (review.reviewer?.firstName ||
+                                    review.user?.firstName ||
+                                    review.reviewer?.name ||
+                                    review.user?.name ||
+                                    "?")[0] || "?"
+                                ).toUpperCase()
                               }}
                             </div>
                             <div class="flex-1 min-w-0">
-                              <p class="text-sm font-medium text-gray-800 truncate">
+                              <p
+                                class="text-sm font-medium text-gray-800 truncate"
+                              >
                                 {{
                                   review.reviewer
-                                    ? (review.reviewer.firstName && review.reviewer.lastName
-                                        ? `${review.reviewer.firstName} ${review.reviewer.lastName}`
-                                        : review.reviewer.firstName || review.reviewer.name || 'ไม่ระบุชื่อ')
+                                    ? review.reviewer.firstName &&
+                                      review.reviewer.lastName
+                                      ? `${review.reviewer.firstName} ${review.reviewer.lastName}`
+                                      : review.reviewer.firstName ||
+                                        review.reviewer.name ||
+                                        "ไม่ระบุชื่อ"
                                     : review.user
-                                      ? (review.user.firstName && review.user.lastName
-                                          ? `${review.user.firstName} ${review.user.lastName}`
-                                          : review.user.firstName || review.user.name || 'ไม่ระบุชื่อ')
-                                      : 'ไม่ระบุชื่อ'
+                                      ? review.user.firstName &&
+                                        review.user.lastName
+                                        ? `${review.user.firstName} ${review.user.lastName}`
+                                        : review.user.firstName ||
+                                          review.user.name ||
+                                          "ไม่ระบุชื่อ"
+                                      : "ไม่ระบุชื่อ"
                                 }}
                               </p>
                             </div>
@@ -290,7 +318,8 @@
 
                           <!-- Stars -->
                           <div class="text-yellow-400 text-sm mb-1">
-                            {{ "★".repeat(review.rating) }}{{ "☆".repeat(5 - review.rating) }}
+                            {{ "★".repeat(review.rating)
+                            }}{{ "☆".repeat(5 - review.rating) }}
                           </div>
 
                           <p
@@ -305,11 +334,18 @@
                             class="grid grid-cols-3 gap-2 mt-2"
                           >
                             <img
-                              v-for="(imgUrl, imgIdx) in extractReviewImages(review.comment)"
+                              v-for="(imgUrl, imgIdx) in extractReviewImages(
+                                review.comment,
+                              )"
                               :key="imgIdx"
                               :src="imgUrl"
-                              alt="รูปภาพในรีวิว"
-                              class="object-cover w-full rounded-lg shadow-sm aspect-video"
+                              class="object-cover w-full rounded-lg shadow-sm aspect-video cursor-pointer hover:opacity-80 transition-opacity"
+                              @click.stop="
+                                openLightbox(
+                                  extractReviewImages(review.comment),
+                                  imgIdx,
+                                )
+                              "
                             />
                           </div>
                         </div>
@@ -328,11 +364,15 @@
                           ← ก่อนหน้า
                         </button>
                         <span class="text-xs text-gray-500">
-                          หน้า {{ getDriverReviewPage(trip.driverId) + 1 }} / {{ getDriverReviewTotalPages(trip.driverId) }}
+                          หน้า {{ getDriverReviewPage(trip.driverId) + 1 }} /
+                          {{ getDriverReviewTotalPages(trip.driverId) }}
                         </span>
                         <button
                           @click.stop="nextReviewPage(trip.driverId)"
-                          :disabled="getDriverReviewPage(trip.driverId) + 1 >= getDriverReviewTotalPages(trip.driverId)"
+                          :disabled="
+                            getDriverReviewPage(trip.driverId) + 1 >=
+                            getDriverReviewTotalPages(trip.driverId)
+                          "
                           class="px-3 py-1 text-xs text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           ถัดไป →
@@ -573,7 +613,13 @@
             :disabled="isSubmittingReview || !!reviewedBookings[reviewTrip?.id]"
             class="px-4 py-2 text-sm text-white bg-yellow-600 rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ isSubmittingReview ? "กำลังส่ง..." : reviewedBookings[reviewTrip?.id] ? "รีวิวแล้ว" : "ส่งรีวิว" }}
+            {{
+              isSubmittingReview
+                ? "กำลังส่ง..."
+                : reviewedBookings[reviewTrip?.id]
+                  ? "รีวิวแล้ว"
+                  : "ส่งรีวิว"
+            }}
           </button>
         </div>
       </div>
@@ -810,6 +856,47 @@
         </div>
       </div>
     </div>
+    <Teleport to="body">
+      <div
+        v-if="lightbox.show"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
+        @click.self="closeLightbox"
+      >
+        <button
+          @click="closeLightbox"
+          class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300"
+        >
+          ✕
+        </button>
+
+        <img
+          :src="lightbox.images[lightbox.index]"
+          class="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+        />
+
+        <button
+          v-if="lightbox.index > 0"
+          @click="lightboxPrev"
+          class="absolute left-4 text-white text-5xl hover:text-gray-300"
+        >
+          ‹
+        </button>
+        <button
+          v-if="lightbox.index < lightbox.images.length - 1"
+          @click="lightboxNext"
+          class="absolute right-4 text-white text-5xl hover:text-gray-300"
+        >
+          ›
+        </button>
+
+        <div
+          v-if="lightbox.images.length > 1"
+          class="absolute bottom-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full"
+        >
+          {{ lightbox.index + 1 }} / {{ lightbox.images.length }}
+        </div>
+      </div>
+    </Teleport>
 
     <ConfirmModal
       :show="isModalVisible"
@@ -848,10 +935,26 @@ const comment = ref("");
 const reviewImages = ref([]);
 const reviewedBookings = ref({});
 const driverReviews = ref({});
-const reviewPage = ref({}); 
+const reviewPage = ref({});
 const REVIEWS_PER_PAGE = 3;
 
-//
+// Lightbox สำหรับรูปรีวิว
+const lightbox = ref({ show: false, images: [], index: 0 });
+function openLightbox(images, index) {
+  lightbox.value = { show: true, images, index };
+}
+function closeLightbox() {
+  lightbox.value.show = false;
+}
+function lightboxPrev() {
+  if (lightbox.value.index > 0) lightbox.value.index--;
+}
+function lightboxNext() {
+  if (lightbox.value.index < lightbox.value.images.length - 1)
+    lightbox.value.index++;
+}
+
+// ฟังก์ชันช่วยเหลือสำหรับรีวิว
 function getDriverRating(driverId) {
   const reviews = driverReviews.value[driverId] || [];
 
@@ -912,9 +1015,8 @@ async function fetchDriverReviews(driverId) {
 
     driverReviews.value = {
       ...driverReviews.value,
-  [driverId]: res.reviews || [],
+      [driverId]: res.reviews || [],
     };
-
   } catch (err) {
     console.error("โหลดรีวิวคนขับไม่สำเร็จ", err);
     driverReviews.value = {
@@ -1513,7 +1615,7 @@ async function fetchMyTrips() {
     // map ข้อมูลพื้นฐานก่อน (ตั้งชื่อชั่วคราวเป็นพิกัด แล้วไป reverse geocode ภายหลัง)
     const formatted = bookings.map((b) => {
       const driverData = {
-        id: b.route.driver.id, 
+        id: b.route.driver.id,
         name: `${b.route.driver.firstName} ${b.route.driver.lastName}`.trim(),
         image:
           b.route.driver.profilePicture ||
@@ -1653,13 +1755,17 @@ async function fetchMyTrips() {
     // ตรวจสอบสถานะรีวิวของทุก trip พร้อมกัน (parallel) เพื่อความเร็ว
     await Promise.all(
       formatted
-        .filter((trip) => trip.status === 'completed')
-        .map((trip) => checkReviewStatus(trip.id))
+        .filter((trip) => trip.status === "completed")
+        .map((trip) => checkReviewStatus(trip.id)),
     );
 
     // โหลดรีวิวของคนขับทุกคนในทุกสถานะ (deduplicate โดย driverId)
-    const uniqueDriverIds = [...new Set(formatted.map((trip) => trip.driverId).filter(Boolean))];
-    await Promise.all(uniqueDriverIds.map((driverId) => fetchDriverReviews(driverId)));
+    const uniqueDriverIds = [
+      ...new Set(formatted.map((trip) => trip.driverId).filter(Boolean)),
+    ];
+    await Promise.all(
+      uniqueDriverIds.map((driverId) => fetchDriverReviews(driverId)),
+    );
 
     // รอให้แผนที่พร้อมก่อน แล้วค่อย reverse geocode เพื่อได้ "ชื่อสถานที่" สวยๆ
     await waitMapReady();
