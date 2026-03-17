@@ -192,10 +192,25 @@
                         </div>
                         <div class="flex items-center mt-1">
                           <div class="flex text-yellow-400">
-                            <span v-for="star in 5" :key="star">{{
-                              star <= route.driver.rating ? "★" : "☆"
-                            }}</span>
+                            <span>
+                              {{
+                                "★".repeat(
+                                  Math.round(
+                                    getDriverRating(route.driverId).avg,
+                                  ),
+                                )
+                              }}
+                              {{
+                                "☆".repeat(
+                                  5 -
+                                    Math.round(
+                                      getDriverRating(route.driverId).avg,
+                                    ),
+                                )
+                              }}
+                            </span>
                           </div>
+
                           <span class="ml-2 text-sm text-gray-600">
                             {{ getDriverRating(route.driverId).avg }}
                             ({{ getDriverRating(route.driverId).count }} รีวิว)
@@ -419,7 +434,13 @@
                               )"
                               :key="imgIdx"
                               :src="imgUrl"
-                              class="object-cover w-full rounded-lg shadow-sm aspect-video"
+                              class="object-cover w-full rounded-lg shadow-sm aspect-video cursor-pointer hover:opacity-80 transition-opacity"
+                              @click.stop="
+                                openLightbox(
+                                  extractReviewImages(review.comment),
+                                  imgIdx,
+                                )
+                              "
                             />
                           </div>
                         </div>
@@ -446,13 +467,11 @@
                           @click.stop="nextReviewPage(route.driverId)"
                           class="px-3 py-1 text-xs text-gray-600 border rounded-md hover:bg-gray-100"
                         >
-
                           ถัดไป →
                         </button>
                       </div>
                     </div>
                   </div>
-                  
                   <div class="flex justify-end mt-4">
                     <button
                       @click.stop="openModal(route)"
@@ -795,6 +814,48 @@
         </div>
       </div>
     </transition>
+    <Teleport to="body">
+      <div
+        v-if="lightbox.show"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
+        @click.self="closeLightbox"
+      >
+        <button
+          @click="closeLightbox"
+          class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300"
+        >
+          ✕
+        </button>
+
+        <img
+          :src="lightbox.images[lightbox.index]"
+          class="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+        />
+
+        <button
+          v-if="lightbox.index > 0"
+          @click="lightboxPrev"
+          class="absolute left-4 text-white text-5xl hover:text-gray-300"
+        >
+          ‹
+        </button>
+        <button
+          v-if="lightbox.index < lightbox.images.length - 1"
+          @click="lightboxNext"
+          class="absolute right-4 text-white text-5xl hover:text-gray-300"
+        >
+          ›
+        </button>
+
+        <div
+          v-if="lightbox.images.length > 1"
+          class="absolute bottom-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full"
+        >
+          {{ lightbox.index + 1 }} / {{ lightbox.images.length }}
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Map Picker Modal -->
     <transition name="modal-fade">
       <div
@@ -967,8 +1028,6 @@ const searchForm = ref({
 });
 const RADIUS_METERS = 500;
 
-
-
 const routes = ref([]);
 const selectedRoute = ref(null);
 const isLoading = ref(false);
@@ -1004,7 +1063,7 @@ async function fetchDriverReviews(driverId) {
     const res = await $api(`/reviews/driver/${driverId}`);
     driverReviews.value = {
       ...driverReviews.value,
-      [driverId]: res.reviews || res.data || [] // ปรับตาม format API ของคุณ
+      [driverId]: res.reviews || res.data || [], // ปรับตาม format API ของคุณ
     };
   } catch (err) {
     console.error("โหลดรีวิวคนขับไม่สำเร็จ", err);
@@ -1017,9 +1076,9 @@ function getDriverRating(driverId) {
   const reviews = driverReviews.value[driverId] || [];
   if (!reviews.length) return { avg: 0, count: 0 };
   const total = reviews.reduce((sum, r) => sum + r.rating, 0);
-  return { 
-    avg: (total / reviews.length).toFixed(1), 
-    count: reviews.length 
+  return {
+    avg: (total / reviews.length).toFixed(1),
+    count: reviews.length,
   };
 }
 
@@ -1031,7 +1090,9 @@ function getDriverReviewsPage(driverId) {
 }
 
 function getDriverReviewTotalPages(driverId) {
-  return Math.ceil((driverReviews.value[driverId]?.length || 0) / REVIEWS_PER_PAGE);
+  return Math.ceil(
+    (driverReviews.value[driverId]?.length || 0) / REVIEWS_PER_PAGE,
+  );
 }
 
 function nextReviewPage(driverId) {
@@ -1054,9 +1115,29 @@ function extractReviewText(comment) {
 function extractReviewImages(comment) {
   if (!comment) return [];
   const match = comment.match(/\[images\]([\s\S]*?)\[\/images\]/);
-  return match ? match[1].split("\n").map(u => u.trim()).filter(u => u) : [];
+  return match
+    ? match[1]
+        .split("\n")
+        .map((u) => u.trim())
+        .filter((u) => u)
+    : [];
 }
 
+// Lightbox สำหรับรูปรีวิว
+const lightbox = ref({ show: false, images: [], index: 0 });
+function openLightbox(images, index) {
+  lightbox.value = { show: true, images, index };
+}
+function closeLightbox() {
+  lightbox.value.show = false;
+}
+function lightboxPrev() {
+  if (lightbox.value.index > 0) lightbox.value.index--;
+}
+function lightboxNext() {
+  if (lightbox.value.index < lightbox.value.images.length - 1)
+    lightbox.value.index++;
+}
 
 function cleanAddr(a) {
   return (a || "")
@@ -1242,6 +1323,14 @@ async function handleSearch() {
         routes.value[i].destinationName = dParts.name;
     });
     await Promise.allSettled(jobs);
+
+    // โหลดรีวิวคนขับทุกคนทันทีหลัง routes โหลดเสร็จ
+    const uniqueDriverIds = [
+      ...new Set(routes.value.map((r) => r.driverId).filter(Boolean)),
+    ];
+    await Promise.allSettled(
+      uniqueDriverIds.map((id) => fetchDriverReviews(id)),
+    );
   } catch (e) {
     console.error("Failed to fetch routes:", e);
     routes.value = [];
@@ -1328,7 +1417,6 @@ const toggleDetails = async (route) => {
     }
   }
 };
-
 
 function waitMapReady() {
   return new Promise((resolve) => {
