@@ -45,6 +45,7 @@
                                 {{ incident.id }}
                         </p>
 
+
                         <p>
                             <span class="font-semibold">Route ID :</span>
                                 {{ incident.routeId || '-' }}
@@ -169,91 +170,96 @@
 
                         <p class="font-semibold mb-2">รายละเอียดทริป</p>
 
-                        <div class="grid md:grid-cols-2 gap-4 text-sm">
+                            <div class="grid md:grid-cols-2 gap-4 text-sm">
 
-                            <div>
-                            <p class="text-gray-500">Trip ID</p>
-                            <p class="font-medium">
-                                {{ incident.route.id }}
-                            </p>
-                            </div>
-
-                            <div v-if="incident.route.driver">
-                            <p class="text-gray-500">คนขับ</p>
-                            <p class="font-medium">
-                                {{ incident.route.driver.firstName }}
-                                {{ incident.route.driver.lastName }}
-                            </p>
-                            </div>
-
-                            <div v-if="incident.route.origin">
-                            <p class="text-gray-500">ต้นทาง</p>
-                            <p class="font-medium">
-                                {{ incident.route.origin }}
-                            </p>
-                            </div>
-
-                            <div v-if="incident.route.destination">
-                                <p class="text-gray-500">ปลายทาง</p>
+                                <div>
+                                <p class="text-gray-500">Trip ID</p>
                                 <p class="font-medium">
-                                    {{ incident.route.destination }}
+                                    {{ incident.route.id }}
                                 </p>
-                            </div>
+                                </div>
 
-                            <div class="mt-6">
-
-                                <p class="font-semibold mb-2">
-                                รายชื่อผู้ขับและผู้โดยสารทั้งหมด
+                                <div v-if="incident.route.driver">
+                                <p class="text-gray-500">คนขับ</p>
+                                <p class="font-medium">
+                                    {{ incident.route.driver.firstName }}
+                                    {{ incident.route.driver.lastName }}
                                 </p>
 
-                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <!-- Route -->
+                                <div v-if="incident.route.origin || incident.route.destination">
+                                    <p class="text-gray-500">เส้นทาง</p>
+                                    <p class="font-medium">
+                                    {{ incident.route.origin }} → {{ incident.route.destination }}
+                                    </p>
+                                </div>
 
-                                <thead class="bg-gray-50">
-                                <tr>
+                                <!-- Passenger count -->
+                                <div>
+                                    <p class="text-gray-500">จำนวนผู้โดยสาร</p>
+                                    <p class="font-medium">
+                                    {{ incident.route.bookings?.length || 0 }} คน
+                                    </p>
+                                </div>
 
-                                <th class="px-4 py-3 text-xs text-left text-gray-500 uppercase">
-                                ชื่อ-นามสกุล
-                                </th>
+                                </div>
 
-                                </tr>
-                                </thead>
+                                
 
-                                <tbody class="bg-white divide-y divide-gray-200">
+                                <div class="mt-6">
 
-                                <tr
-                                v-for="u in tripUsers"
-                                :key="u.id"
-                                >
+                                    <p class="font-semibold mb-2">
+                                    รายชื่อผู้ขับและผู้โดยสารทั้งหมด
+                                    </p>
 
-                                <td class="px-4 py-3">
+                                    <table class="min-w-full divide-y divide-gray-200 text-sm">
 
-                                <span
-                                v-if="u.role === 'driver'"
-                                class="inline-flex items-center px-2 py-1 mr-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-full"
-                                >
-                                คนขับ
-                                </span>
+                                    <thead class="bg-gray-50">
+                                    <tr>
 
-                                <span
-                                v-else
-                                class="inline-flex items-center px-2 py-1 mr-2 text-xs font-medium text-green-700 bg-green-100 rounded-full"
-                                >
-                                ผู้โดยสาร
-                                </span>
+                                    <th class="px-4 py-3 text-xs text-left text-gray-500 uppercase">
+                                    ชื่อ-นามสกุล
+                                    </th>
 
-                                {{ u.firstName }} {{ u.lastName }}
+                                    </tr>
+                                    </thead>
 
-                                </td>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+
+                                    <tr
+                                    v-for="u in tripUsers"
+                                    :key="u.id"
+                                    >
+
+                                    <td class="px-4 py-3">
+
+                                    <span
+                                    v-if="u.role === 'driver'"
+                                    class="inline-flex items-center px-2 py-1 mr-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-full"
+                                    >
+                                    คนขับ
+                                    </span>
+
+                                    <span
+                                    v-else
+                                    class="inline-flex items-center px-2 py-1 mr-2 text-xs font-medium text-green-700 bg-green-100 rounded-full"
+                                    >
+                                    ผู้โดยสาร
+                                    </span>
+
+                                    {{ u.firstName }} {{ u.lastName }}
+
+                                    </td>
 
 
-                                </tr>
+                                    </tr>
 
-                                </tbody>
-                                </table>
+                                    </tbody>
+                                    </table>
+
+                                </div>
 
                             </div>
-
-                        </div>
 
                         </div>
 
