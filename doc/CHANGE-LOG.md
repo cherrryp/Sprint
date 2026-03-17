@@ -682,6 +682,15 @@ All notable changes to this project will be documented in this file.
 - **Test Documentation**: Added a formal UAT test scenario document for the Report API.
 
 ---
+## [3.0.0] - 2026-03-17 - Yodsanon_0215
+
+### Added
+- **UAT Incident Report Test**: Added an automated UAT suite using Robot Framework for the Incident Report system, covering both User and Admin flows.
+- **Test Documentation**: Added a formal UAT scenario document  for the Incident Report.
+
+---
+
+
 
 ## Version Guidelines
 
